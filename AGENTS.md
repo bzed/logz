@@ -101,6 +101,26 @@ detectors in `analyze.py`, and the schema documentation in
 done. When in doubt about how a field is consumed, grep logz-analyzer for the
 field name first.
 
+## 4a. Server-side only — never call client-side functions
+
+logz runs on the dedicated server (`-servermod=@LogZ`, every file
+`#ifdef SERVER`). **Never call or hook a client-side function.** Before
+hooking any vanilla method, verify in `../dayz-sources/scripts/` that it
+executes server-side:
+
+- Check for `g_Game.IsServer()` / `IsDedicatedServer()` guards,
+  `#ifndef SERVER` blocks, and the full caller chain. A method whose only
+  callers early-return on dedicated servers is client-only — e.g.
+  `DayZPlayerInventory.OnInventoryFailure` (its caller
+  `OnInventoryJunctureFailureFromServer` returns early at
+  `dayzplayerinventory.c:571`; the server-side surface is the
+  `ProcessInputData` → `Validate*` path instead).
+- Engine-invoked callbacks whose execution side cannot be proven from the
+  sources get a live-verification flag before the hook is relied on.
+- Client-side data-enrichment candidates are collected in
+  `../IMPLEMENTATION_PLAN.md` Appendix A — reference only, never implemented
+  here.
+
 ## 5. Git workflow
 
 - Branch off `master` before editing (`feat/…`, `fix/…`, `docs/…`). Do not
