@@ -1,6 +1,7 @@
 /*
     SPDX-License-Identifier: GPL-3.0-or-later
     Copyright (c) 2025 WoozyMasta
+    Copyright (c) 2026 Bernd Zeimetz <bernd@bzed.de>
     Source: https://github.com/woozymasta/logz
 */
 
