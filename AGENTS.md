@@ -40,6 +40,14 @@ there before changing a hook; never edit or copy from that tree into a commit.
 
 - Every source file: SPDX header, then `#ifdef SERVER` as the first code line,
   ASCII only. Check with `bash tools/validate.sh` (see the caveat below).
+- **Prefer globals over accessor calls (DayZ 1.29 convention):** always use
+  `g_Game`, never `GetGame()` — the global is a variable read, the accessor a
+  native call on the hot path. The same applies to the other accessor/global
+  pairs: `GetPluginManager()` → `g_Plugins`, `GetDispatcher()` → `g_Dispatcher`
+  (both pure accessors in vanilla; `GetPluginManager`'s null-init branch is
+  commented out, so it is exactly `return g_Plugins`). `validate.sh` fails on
+  `GetGame()`. Note: `GetParticleManager()` is a `proto native` method on
+  `ParticleSource`, not a global accessor — it is not covered by this rule.
 - Formatting: astyle with `.astylerc` (K&R style, tabs, `--pad-oper`,
   `--pad-comma`, `--pad-header`, `--squeeze-lines=2`, `--remove-braces`).
   `astyle` is not installed on this machine — install it (`apt install

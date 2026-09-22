@@ -22,4 +22,10 @@ while read -r file; do
     echo "FAIL: non-ASCII chars present: $file"
     exit 1
   fi
+
+  # DayZ 1.29: prefer the g_Game global over the GetGame() accessor call
+  if grep -n "GetGame()" "$file"; then
+    echo "FAIL: use g_Game instead of GetGame(): $file"
+    exit 1
+  fi
 done < <(find ./scripts -type f -name "*.c")
