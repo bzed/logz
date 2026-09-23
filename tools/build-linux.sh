@@ -4,18 +4,14 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# The PBO prefix must be "logz/", so pack relative to the directory that holds the repo.
-root="$(dirname "$repo")"
-name="$(basename "$repo")"
+# The PBO needs a "logz" prefix header with the files at the archive root (what AddonBuilder
+# writes with -prefix=logz): config.cpp registers script modules as logz/scripts/3_game and the
+# engine resolves them through the prefix. Without the header (files under a logz/ folder
+# instead) the mod's config is read but NONE of its scripts load, silently.
 out="$repo/build/@LogZ/addons/logz.pbo"
-
-if [ "$name" != "logz" ]; then
-  echo "expected the repository directory to be named 'logz', got '$name'" >&2
-  exit 1
-fi
 
 mkdir -p "$(dirname "$out")"
 rm -f "$out"
-pbo "$out" -C "$root" "$name/config.cpp" "$name/scripts" "$name/LICENSE"
+pbo -H prefix=logz "$out" -C "$repo" config.cpp scripts LICENSE 2>/dev/null
 unpbo --list "$out" | tail -n 3
 echo "Built $out"

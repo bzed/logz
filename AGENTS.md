@@ -77,13 +77,18 @@ machine, build with dayz-dev-tools instead:
 The manual form:
 
 ```sh
-cd <workspace>
-pbo <output>/logz.pbo -C <workspace> logz/config.cpp logz/scripts logz/LICENSE
+cd <repo>   # the logz checkout
+pbo -H prefix=logz <output>/logz.pbo -C . config.cpp scripts LICENSE
 ```
 
-- The `logz/` path prefix inside the PBO is required — `config.cpp` registers
-  script modules as `logz/scripts/3_game` etc., and the game resolves them
-  relative to the PBO root.
+- **The `prefix=logz` header is required, and the files sit at the archive root.**
+  `config.cpp` registers script modules as `logz/scripts/3_game` etc., and the engine
+  resolves them through the PBO prefix (what AddonBuilder writes with `-prefix="logz"`).
+  Verified on a local dedicated server 2026-09-23: packing the files under a `logz/`
+  folder *without* the header makes the server read the mod's config (the `LOGZ` define
+  appears) but load **none** of its scripts, silently — no error, the Game module stays
+  at the vanilla 416 files / 1379 classes; with the header it loads 437 / 1418.
+  Path case does not matter (a fully lowercased tree behaved the same as mixed case).
 - Install the result as `<servermod-dir>/@LogZ/addons/logz.pbo`, matching
   upstream's build layout (`@logz/addons/logz.pbo`) and the `-servermod=@LogZ`
   launch parameter from the README.
