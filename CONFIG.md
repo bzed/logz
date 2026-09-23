@@ -115,6 +115,10 @@ Changes require a server restart to take effect.
 * **`filters.skip_ai_snapshots`** (`bool`) = true -
   Skip AI (eAI) players in periodic snapshot events. AI has no `steam_id`;
   the analyzer ignores it anyway, so this only saves log volume.
+* **`filters.skip_ai_weapon_fire`** (`bool`) = true -
+  Skip AI (eAI) shooters in `WEAPON_FIRE` events. Fire events are
+  unthrottled by default and eAI fires a lot; the analyzer ignores AI
+  shooters.
 
 ### Throttling
 

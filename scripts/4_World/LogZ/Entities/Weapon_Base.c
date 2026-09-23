@@ -12,6 +12,7 @@
 modded class Weapon_Base
 {
 	int m_LogZ_LastFireTime;
+	int m_LogZ_LastFireEventTime;
 
 	override void OnFire(int muzzle_index)
 	{
@@ -29,6 +30,28 @@ modded class Weapon_Base
 		LogZ_GameLogger.WithObject(
 		    this, "weapon shoot",
 		    LogZ_Level.DEBUG, LogZ_Event.PLAYER_ACTIVITY, "", true);
+	}
+
+	// Authoritative per-shot event, independent of whether the shot hits anything.
+	// EEFired is engine-invoked with no script callers, so that the server reaches it for
+	// remote players' shots is unverified until a live server logs it (plan section 5).
+	override void EEFired(int muzzleType, int mode, string ammoType)
+	{
+		super.EEFired(muzzleType, mode, ammoType);
+
+		if (!LogZ_Config.IsLoaded())
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.weapon_fire_event_ms;
+		if (intervalMs > 0) {
+			int time = g_Game.GetTime();
+			if ((time - m_LogZ_LastFireEventTime) < intervalMs)
+				return;
+
+			m_LogZ_LastFireEventTime = time;
+		}
+
+		LogZ_WorldLogger.WithWeaponFire(this, muzzleType, mode, ammoType);
 	}
 }
 #endif

@@ -186,6 +186,10 @@ class LogZ_ConfigDTO_Filters
 	// AI has no `steam_id`; the analyzer ignores it anyway, so this only saves log volume.
 	bool skip_ai_snapshots = true;
 
+	// Skip AI (eAI) shooters in `WEAPON_FIRE` events.
+	// Fire events are unthrottled by default and eAI fires a lot; the analyzer ignores AI shooters.
+	bool skip_ai_weapon_fire = true;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
