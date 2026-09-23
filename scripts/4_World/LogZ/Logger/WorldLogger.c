@@ -149,6 +149,52 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log one weapon shot with weapon, shooter and jam/stamina context.
+	    \details
+	        Same roles as hit events: the weapon is "attacker", the shooter "attacker_parent"
+	        (its yaw is the aim direction). Skips shooters without an identity (eAI) when
+	        filters.skip_ai_weapon_fire is set. chance_to_jam is only meaningful above zero:
+	        bolt-actions, single-shots and archery can never jam.
+	    \param weapon Fired weapon.
+	    \param muzzle Muzzle index from Weapon_Base.OnFire.
+	*/
+	static void WithWeaponFire(Weapon_Base weapon, int muzzle)
+	{
+		if (!LogZ_Config.IsLoaded() || !weapon || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.WEAPON_FIRE))
+			return;
+
+		PlayerBase shooter = PlayerBase.Cast(weapon.GetHierarchyRootPlayer());
+		if (!shooter)
+			return;
+
+		if (LogZ_Config.Get().filters.skip_ai_weapon_fire && !shooter.GetIdentity())
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(weapon, json))
+			dto.Insert("attacker", json);
+
+		if (LogZ_GameLogger.SerializeObject(shooter, json))
+			dto.Insert("attacker_parent", json);
+
+		dto.Insert("muzzle", muzzle.ToString());
+		dto.Insert("mode", weapon.GetCurrentModeName(muzzle));
+		dto.Insert("mode_index", weapon.GetCurrentMode(muzzle).ToString());
+		dto.Insert("burst_count", weapon.GetBurstCount().ToString());
+		dto.Insert("stamina", shooter.GetStatStamina().Get().ToString());
+		dto.Insert("chance_to_jam", weapon.GetSyncChanceToJam().ToString());
+
+		if (weapon.IsJammed())
+			dto.Insert("is_jammed", "1");
+		else
+			dto.Insert("is_jammed", "0");
+
+		LogZ.Log("weapon fired", LogZ_Level.INFO, LogZ_Event.WEAPON_FIRE, dto);
+	}
+
+	/**
 	    \brief Log action start/end with attached context.
 	    \param action_data ActionData instance.
 	    \param isStart     True for start, false for end.

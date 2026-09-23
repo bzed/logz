@@ -76,7 +76,10 @@ class LogZ_ConfigDTO_Settings
 	// Event mask configuration.
 	// Can be a specific bitmask integer or a string of characters representing event categories.
 	// Example: "ABKqz" or "-1" (for all).
-	string events_mask = "ABCDEFGHIJKLMOPQSTUVWXYZ";
+	// Letters cover only the first 26 events; `WEAPON_FIRE` and `INVENTORY_FAILURE`
+	// have no letter and are enabled through the numeric form only.
+	// Existing config files keep their saved value: set "-1" there to enable the new events.
+	string events_mask = "-1";
 
 	// Disable send minimal telemetry 10-20 minutes after server startup.
 	bool disable_telemetry;
@@ -179,6 +182,14 @@ class LogZ_ConfigDTO_Filters
 	// Filters out zombies/animals killing themselves via glitches.
 	bool only_player_suicide = true;
 
+	// Skip AI (eAI) players in periodic snapshot events.
+	// AI has no `steam_id`; the analyzer ignores it anyway, so this only saves log volume.
+	bool skip_ai_snapshots = true;
+
+	// Skip AI (eAI) shooters in `WEAPON_FIRE` events.
+	// Fire events are unthrottled by default and eAI fires a lot; the analyzer ignores AI shooters.
+	bool skip_ai_weapon_fire = true;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
@@ -191,12 +202,42 @@ class LogZ_ConfigDTO_Throttling
 	// Prevents logging every single shot for high RPM weapons.
 	int weapon_fire_ms = 250;
 
+	// Minimum interval in milliseconds between `WEAPON_FIRE` events per weapon.
+	// 0 - log every shot (default), the analyzer needs the true inter-shot intervals.
+	int weapon_fire_event_ms = 0;
+
+	// Minimum interval in milliseconds between `INVENTORY_FAILURE` events
+	// per player and failure reason. 0 - log every failure.
+	int inventory_failure_ms = 1000;
+
+	// Interval in seconds between periodic player movement snapshots.
+	// 0 - disabled.
+	int player_snapshot_s = 10;
+
+	// Interval in seconds between periodic transport snapshots (only while a driver is present).
+	// 0 - disabled.
+	int transport_snapshot_s = 15;
+
+	// Minimum interval in milliseconds between item quantity change events per item.
+	// 0 - log every change.
+	int quantity_change_ms = 500;
+
+	// Minimum interval in milliseconds between projectile stop events per shooter.
+	// 0 - log every projectile.
+	int projectile_ms = 200;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
 	void Normalize()
 	{
 		weapon_fire_ms = Math.Clamp(weapon_fire_ms, 50, 5000);
+		weapon_fire_event_ms = Math.Clamp(weapon_fire_event_ms, 0, 5000);
+		inventory_failure_ms = Math.Clamp(inventory_failure_ms, 0, 60000);
+		player_snapshot_s = Math.Clamp(player_snapshot_s, 0, 3600);
+		transport_snapshot_s = Math.Clamp(transport_snapshot_s, 0, 3600);
+		quantity_change_ms = Math.Clamp(quantity_change_ms, 0, 60000);
+		projectile_ms = Math.Clamp(projectile_ms, 0, 60000);
 	}
 }
 

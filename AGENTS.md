@@ -72,14 +72,23 @@ checkout — run `awk -f tools/first_code_line.awk` yourself, or `chmod +x` the
 The upstream `tools/build.sh` targets Windows AddonBuilder. On this Linux
 machine, build with dayz-dev-tools instead:
 
+`bash tools/build-linux.sh` runs the command below and writes
+`build/@LogZ/addons/logz.pbo` (git-ignored) — copy the `@LogZ` folder to the server.
+The manual form:
+
 ```sh
-cd <workspace>
-pbo <output>/logz.pbo -C <workspace> logz/config.cpp logz/scripts logz/LICENSE
+cd <repo>   # the logz checkout
+pbo -H prefix=logz <output>/logz.pbo -C . config.cpp scripts LICENSE
 ```
 
-- The `logz/` path prefix inside the PBO is required — `config.cpp` registers
-  script modules as `logz/scripts/3_game` etc., and the game resolves them
-  relative to the PBO root.
+- **The `prefix=logz` header is required, and the files sit at the archive root.**
+  `config.cpp` registers script modules as `logz/scripts/3_game` etc., and the engine
+  resolves them through the PBO prefix (what AddonBuilder writes with `-prefix="logz"`).
+  Verified on a local dedicated server 2026-09-23: packing the files under a `logz/`
+  folder *without* the header makes the server read the mod's config (the `LOGZ` define
+  appears) but load **none** of its scripts, silently — no error, the Game module stays
+  at the vanilla 416 files / 1379 classes; with the header it loads 437 / 1418.
+  Path case does not matter (a fully lowercased tree behaved the same as mixed case).
 - Install the result as `<servermod-dir>/@LogZ/addons/logz.pbo`, matching
   upstream's build layout (`@logz/addons/logz.pbo`) and the `-servermod=@LogZ`
   launch parameter from the README.
@@ -91,6 +100,30 @@ pbo <output>/logz.pbo -C <workspace> logz/config.cpp logz/scripts logz/LICENSE
   present). Working server mods shipping `config.cpp` exist, so this is fine;
   if a server ever refuses to load the mod, convert with the Windows DayZ
   Tools first.
+
+### 3a. Testing on the local dedicated server (headless, verified 2026-09-23)
+
+`~/.steam/debian-installation/steamapps/common/DayZServer` is a vanilla install. The server
+is ready in seconds (landscape ~1.3 s, mission ~8 s) and then idles with no players — a quiet
+script log is not a stall. Copy `build/@LogZ` into that directory, then run it with a scratch
+profile so nothing is written into the install:
+
+```sh
+cd <DayZServer> && timeout 60 ./DayZServer -config=<serverDZ copy> -profiles=<scratch>/profile \
+    -servermod=@LogZ -port=2402 -nosplash -nopause -dologs
+```
+
+- Success is visible in `<profile>/script_*.log`: the Game module must report more than the
+  vanilla 416 files, and `LogZ: loaded ...` must appear; output lands in `<profile>/logz/logs/`.
+  `SCRIPT (E)` lines are compile errors. Do not `pkill -f DayZServer` from the same shell
+  command line (it matches itself).
+- There is no client, so hooks driven by players need a scratch copy of the mod with a
+  debug call (spawn `g_Game.CreatePlayer(null, ...)`, `CreateInHands`, call the method).
+  Keep such copies outside the repo. A player without identity is skipped by the AI filters.
+
+**Required, not optional:** every logz change is verified this way before it is called done
+(see `../AGENTS.md`, "Verify logz changes on the local dedicated server"). Debug `Print`
+statements in scratch copies are fine.
 
 ## 4. Changing the log output — the analyzer contract
 

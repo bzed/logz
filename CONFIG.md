@@ -73,10 +73,13 @@ Changes require a server restart to take effect.
 * **`settings.level`** (`string`) = "info" -
   Minimum severity level for logging. Values: `trace`, `debug`, `info`,
   `warn`, `error`, `fatal`, `off`. Default is `info`.
-* **`settings.events_mask`** (`string`) = "ABCDEFGHIJKLMOPQSTUVWXYZ" -
+* **`settings.events_mask`** (`string`) = "-1" -
   Event mask configuration. Can be a specific bitmask integer or a string of
   characters representing event categories. Example: "ABKqz" or "-1" (for
-  all).
+  all). Letters cover only the first 26 events; `WEAPON_FIRE` and
+  `INVENTORY_FAILURE` have no letter and are enabled through the numeric
+  form only. Existing config files keep their saved value: set "-1" there to
+  enable the new events.
 * **`settings.disable_telemetry`** (`bool`) -
   Disable send minimal telemetry 10-20 minutes after server startup.
 
@@ -109,12 +112,38 @@ Changes require a server restart to take effect.
 * **`filters.only_player_suicide`** (`bool`) = true -
   Log suicide events (killer == victim) only for players. Filters out
   zombies/animals killing themselves via glitches.
+* **`filters.skip_ai_snapshots`** (`bool`) = true -
+  Skip AI (eAI) players in periodic snapshot events. AI has no `steam_id`;
+  the analyzer ignores it anyway, so this only saves log volume.
+* **`filters.skip_ai_weapon_fire`** (`bool`) = true -
+  Skip AI (eAI) shooters in `WEAPON_FIRE` events. Fire events are
+  unthrottled by default and eAI fires a lot; the analyzer ignores AI
+  shooters.
 
 ### Throttling
 
 * **`throttling.weapon_fire_ms`** (`int`) = 250 -
   Throttling window in milliseconds for Weapon `OnFire()` events. Prevents
   logging every single shot for high RPM weapons.
+* **`throttling.weapon_fire_event_ms`** (`int`) = 0 -
+  Minimum interval in milliseconds between `WEAPON_FIRE` events per weapon.
+  0 - log every shot (default), the analyzer needs the true inter-shot
+  intervals.
+* **`throttling.inventory_failure_ms`** (`int`) = 1000 -
+  Minimum interval in milliseconds between `INVENTORY_FAILURE` events per
+  player and failure reason. 0 - log every failure.
+* **`throttling.player_snapshot_s`** (`int`) = 10 -
+  Interval in seconds between periodic player movement snapshots. 0 -
+  disabled.
+* **`throttling.transport_snapshot_s`** (`int`) = 15 -
+  Interval in seconds between periodic transport snapshots (only while a
+  driver is present). 0 - disabled.
+* **`throttling.quantity_change_ms`** (`int`) = 500 -
+  Minimum interval in milliseconds between item quantity change events per
+  item. 0 - log every change.
+* **`throttling.projectile_ms`** (`int`) = 200 -
+  Minimum interval in milliseconds between projectile stop events per
+  shooter. 0 - log every projectile.
 
 ### Thresholds
 
@@ -157,7 +186,13 @@ You can sum the decimal values of the desired events.
 * **Example**: To log `SYSTEM_GAME` (1) and `PLAYER_SESSION` (32),
   set value to `33`.
 * **Disable All**: Set to `0`.
-* **Enable All**: Set to `-1` or a very large number.
+* **Enable All**: Set to `-1` or a very large number. This is the default.
+* **Events without a letter**: `WEAPON_FIRE` and `INVENTORY_FAILURE`
+  (bits 26 and 27) cannot be written as letters. Enable them with the
+  numeric form only (for example `-1`).
+* **Existing installs**: `config.json` keeps the value it was created with.
+  Older files hold the former letter default, which leaves the two new events
+  and `N`/`R` off; set `settings.events_mask` to `"-1"` to enable them.
 
 ### Reference Table [Logger/Event.c](./scripts/3_Game/LogZ/Logger/Event.c)
 
@@ -192,3 +227,5 @@ to build your configuration:
 | **X** | `1<<23` | `8388608` | `INVENTORY_IN` | Item taken/attached/cargo-in |
 | **Y** | `1<<24` | `16777216` | `INVENTORY_OUT` | Item dropped/detached/cargo-out |
 | **Z** | `1<<25` | `33554432` | `EXPLOSIVE` | Explosive arming and detonation |
+| **-** | `1<<26` | `67108864` | `WEAPON_FIRE` | Weapon fired a shot (no letter, numeric mask only) |
+| **-** | `1<<27` | `134217728` | `INVENTORY_FAILURE` | Server rejected an inventory move (no letter, numeric mask only) |
