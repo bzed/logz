@@ -88,6 +88,9 @@ class LogZ_WorldLogger
 
 	/**
 	    \brief Log hit / damage event with victim, attacker and damage payload.
+	    \details
+	        The caller skips victims whose kill is already logged (LogZ_IsAlreadyKilled), not
+	        destroyed ones: the lethal hit arrives with the victim already destroyed.
 	    \param victim       Damaged object.
 	    \param source       Damage source (EntityAI) or null.
 	    \param damageResult TotalDamageResult or null.
@@ -101,7 +104,7 @@ class LogZ_WorldLogger
 	*/
 	static void WithHit(Object victim, EntityAI source, TotalDamageResult damageResult, int damageType, int component, string dmgZone, string ammo, vector modelPos, float speedCoef, LogZ_Level lvl = 2)
 	{
-		if (!LogZ_Config.IsLoaded() || !victim || victim.IsDamageDestroyed() || !LogZ_Levels.IsEnabled(lvl))
+		if (!LogZ_Config.IsLoaded() || !victim || !LogZ_Levels.IsEnabled(lvl))
 			return;
 
 		LogZ_Event eventType = ResolveVictimEvent(victim, true);

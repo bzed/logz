@@ -65,7 +65,10 @@ modded class ZombieBase
 	// * --- hit ---
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
-		LogZ_WorldLogger.WithHit(this, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, LogZ_Level.INFO);
+		// EEHitBy runs before OnDamageDestroyed/EEKilled, so the lethal hit is still logged;
+		// only hits after the kill was logged (corpses, ruins) are skipped.
+		if (!LogZ_IsAlreadyKilled())
+			LogZ_WorldLogger.WithHit(this, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, LogZ_Level.INFO);
 
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 	}
