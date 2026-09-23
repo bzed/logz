@@ -46,6 +46,31 @@ class LogZ_GameLogger
 	}
 
 	/**
+	    \brief Log a player disconnect with the engine's kick reason.
+	    \details
+	        Same payload as WithObject plus a top-level "kick_reason" (EClientKicked name, e.g.
+	        LOGOUT, TIMEOUT, INPUT_HACK). Read by PlayerBase.OnDisconnect.
+	    \param obj        Disconnecting player.
+	    \param msg        Message string.
+	    \param kickReason EClientKicked value from GetKickOffReason().
+	*/
+	static void WithDisconnect(Object obj, string msg, EClientKicked kickReason)
+	{
+		if (!obj || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (SerializeObject(obj, json))
+			dto.Insert("object", json);
+
+		dto.Insert("kick_reason", EnumTools.EnumToString(EClientKicked, kickReason));
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
+	}
+
+	/**
 	    \brief Log message with object and owner/parent container.
 	    \details
 	        - Typical use: inventory operations, attachments, triggers.
