@@ -16,6 +16,12 @@ class LogZ_DTO_Damage
 	string damage_type;
 	string ammo_type;
 
+	// Hit forensics from EEHitBy (WP-2). Until populated: component == -1
+	// means "not captured" and model_pos / speed_coef must be ignored.
+	int component = -1; // hit component index
+	vector model_pos; // hit position in model space
+	float speed_coef = -1; // projectile speed damage coefficient
+
 	/**
 	    \brief Construct DTO from TotalDamageResult, type and zone.
 	*/

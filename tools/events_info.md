@@ -23,7 +23,13 @@ You can sum the decimal values of the desired events.
 * **Example**: To log `SYSTEM_GAME` (1) and `PLAYER_SESSION` (32),
   set value to `33`.
 * **Disable All**: Set to `0`.
-* **Enable All**: Set to `-1` or a very large number.
+* **Enable All**: Set to `-1` or a very large number. This is the default.
+* **Events without a letter**: `WEAPON_FIRE` and `INVENTORY_FAILURE`
+  (bits 26 and 27) cannot be written as letters. Enable them with the
+  numeric form only (for example `-1`).
+* **Existing installs**: `config.json` keeps the value it was created with.
+  Older files hold the former letter default, which leaves the two new events
+  and `N`/`R` off; set `settings.events_mask` to `"-1"` to enable them.
 
 ### Reference Table [Logger/Event.c](./scripts/3_Game/LogZ/Logger/Event.c)
 

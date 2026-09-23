@@ -15,6 +15,10 @@
         and secondly, it's just nostalgia for the way permissions were
         configured in MetaMod for Counter-Strike 1.6.
         If anyone wants to improve this, please send me a PR.
+
+        Letters A..Z cover bits 0..25 only. WEAPON_FIRE and INVENTORY_FAILURE
+        (bits 26 and 27) have no letter and are reachable only through the
+        numeric form of events_mask (for example "-1" for all events).
 */
 enum LogZ_Event {
 	NONE = 0, // Nothing
@@ -58,7 +62,10 @@ enum LogZ_Event {
 
 	EXPLOSIVE = 33554432, // Explosive arming and detonation
 
-	MAX = 67108863, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ)
+	WEAPON_FIRE = 67108864, // Weapon fired a shot (no letter, numeric mask only)
+	INVENTORY_FAILURE = 134217728, // Server rejected an inventory move (no letter, numeric mask only)
+
+	MAX = 268435455, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE)
 }
 
 /**
