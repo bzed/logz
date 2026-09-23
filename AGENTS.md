@@ -121,6 +121,10 @@ cd <DayZServer> && timeout 60 ./DayZServer -config=<serverDZ copy> -profiles=<sc
   debug call (spawn `g_Game.CreatePlayer(null, ...)`, `CreateInHands`, call the method).
   Keep such copies outside the repo. A player without identity is skipped by the AI filters.
 
+**Required, not optional:** every logz change is verified this way before it is called done
+(see `../AGENTS.md`, "Verify logz changes on the local dedicated server"). Debug `Print`
+statements in scratch copies are fine.
+
 ## 4. Changing the log output — the analyzer contract
 
 The emitted log line is a contract with logz-analyzer
