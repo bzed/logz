@@ -156,11 +156,9 @@ class LogZ_WorldLogger
 	        filters.skip_ai_weapon_fire is set. chance_to_jam is only meaningful above zero:
 	        bolt-actions, single-shots and archery can never jam.
 	    \param weapon Fired weapon.
-	    \param muzzle Muzzle index from EEFired.
-	    \param mode   Fire mode index from EEFired.
-	    \param ammo   Ammo type name from EEFired.
+	    \param muzzle Muzzle index from Weapon_Base.OnFire.
 	*/
-	static void WithWeaponFire(Weapon_Base weapon, int muzzle, int mode, string ammo)
+	static void WithWeaponFire(Weapon_Base weapon, int muzzle)
 	{
 		if (!LogZ_Config.IsLoaded() || !weapon || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.WEAPON_FIRE))
 			return;
@@ -183,8 +181,7 @@ class LogZ_WorldLogger
 
 		dto.Insert("muzzle", muzzle.ToString());
 		dto.Insert("mode", weapon.GetCurrentModeName(muzzle));
-		dto.Insert("mode_index", mode.ToString());
-		dto.Insert("ammo_type", ammo);
+		dto.Insert("mode_index", weapon.GetCurrentMode(muzzle).ToString());
 		dto.Insert("burst_count", weapon.GetBurstCount().ToString());
 		dto.Insert("stamina", shooter.GetStatStamina().Get().ToString());
 		dto.Insert("chance_to_jam", weapon.GetSyncChanceToJam().ToString());

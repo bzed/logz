@@ -21,27 +21,17 @@ modded class Weapon_Base
 		if (!LogZ_Config.IsLoaded())
 			return;
 
-		int time = g_Game.GetTime();
-		if ((time - m_LogZ_LastFireTime) < LogZ_Config.Get().throttling.weapon_fire_ms)
-			return;
-
-		m_LogZ_LastFireTime = time;
-
-		LogZ_GameLogger.WithObject(
-		    this, "weapon shoot",
-		    LogZ_Level.DEBUG, LogZ_Event.PLAYER_ACTIVITY, "", true);
+		LogZ_FireEvent(muzzle_index);
+		LogZ_FireActivity();
 	}
 
 	// Authoritative per-shot event, independent of whether the shot hits anything.
-	// EEFired is engine-invoked with no script callers, so that the server reaches it for
-	// remote players' shots is unverified until a live server logs it (plan section 5).
-	override void EEFired(int muzzleType, int mode, string ammoType)
+	// Hooked on OnFire, not EEFired: WeaponFire.OnEntry (weaponfire.c) calls OnFire after
+	// TryFireWeapon succeeded, and that state runs on the server (its OnEntry has
+	// g_Game.IsServer() branches). EEFired has no script callers and its script body is
+	// client-only effects, so nothing proves the engine delivers it to a dedicated server.
+	protected void LogZ_FireEvent(int muzzle_index)
 	{
-		super.EEFired(muzzleType, mode, ammoType);
-
-		if (!LogZ_Config.IsLoaded())
-			return;
-
 		int intervalMs = LogZ_Config.Get().throttling.weapon_fire_event_ms;
 		if (intervalMs > 0) {
 			int time = g_Game.GetTime();
@@ -51,7 +41,21 @@ modded class Weapon_Base
 			m_LogZ_LastFireEventTime = time;
 		}
 
-		LogZ_WorldLogger.WithWeaponFire(this, muzzleType, mode, ammoType);
+		LogZ_WorldLogger.WithWeaponFire(this, muzzle_index);
+	}
+
+	// Throttled DEBUG activity event, kept as it was before the fire events existed.
+	protected void LogZ_FireActivity()
+	{
+		int time = g_Game.GetTime();
+		if ((time - m_LogZ_LastFireTime) < LogZ_Config.Get().throttling.weapon_fire_ms)
+			return;
+
+		m_LogZ_LastFireTime = time;
+
+		LogZ_GameLogger.WithObject(
+		    this, "weapon shoot",
+		    LogZ_Level.DEBUG, LogZ_Event.PLAYER_ACTIVITY, "", true);
 	}
 }
 #endif
