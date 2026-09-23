@@ -105,3 +105,6 @@ tools/diag-*.sh
 tools/*ent.sh
 TODO/*
 deob*.sh
+
+# PBO build output (tools/build-linux.sh)
+build/

@@ -72,6 +72,10 @@ checkout — run `awk -f tools/first_code_line.awk` yourself, or `chmod +x` the
 The upstream `tools/build.sh` targets Windows AddonBuilder. On this Linux
 machine, build with dayz-dev-tools instead:
 
+`bash tools/build-linux.sh` runs the command below and writes
+`build/@LogZ/addons/logz.pbo` (git-ignored) — copy the `@LogZ` folder to the server.
+The manual form:
+
 ```sh
 cd <workspace>
 pbo <output>/logz.pbo -C <workspace> logz/config.cpp logz/scripts logz/LICENSE
