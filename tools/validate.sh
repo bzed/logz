@@ -7,7 +7,7 @@ cd "$PROJECT_DIR"
 export LC_ALL=C
 
 while read -r file; do
-  first_line="$(tools/first_code_line.awk "$file")"
+  first_line="$(awk -f tools/first_code_line.awk "$file")"
   if [ "${first_line:-}" != "#ifdef SERVER" ]; then
     echo "FAIL: not define SERVER: $file"
     exit 1
