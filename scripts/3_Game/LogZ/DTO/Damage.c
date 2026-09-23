@@ -16,8 +16,8 @@ class LogZ_DTO_Damage
 	string damage_type;
 	string ammo_type;
 
-	// Hit forensics from EEHitBy (WP-2). Until populated: component == -1
-	// means "not captured" and model_pos / speed_coef must be ignored.
+	// Hit forensics from EEHitBy (WP-2). component == -1 means "not captured"
+	// and model_pos / speed_coef must be ignored.
 	int component = -1; // hit component index
 	vector model_pos; // hit position in model space
 	float speed_coef = -1; // projectile speed damage coefficient
@@ -25,7 +25,7 @@ class LogZ_DTO_Damage
 	/**
 	    \brief Construct DTO from TotalDamageResult, type and zone.
 	*/
-	void LogZ_DTO_Damage(TotalDamageResult damageResult, int damageType, string dmgZone, string ammo)
+	void LogZ_DTO_Damage(TotalDamageResult damageResult, int damageType, string dmgZone, string ammo, int hitComponent = -1, vector hitModelPos = "0 0 0", float hitSpeedCoef = -1)
 	{
 		if (damageResult)
 			damage = damageResult.GetDamage(dmgZone, "");
@@ -35,6 +35,10 @@ class LogZ_DTO_Damage
 		damage_zone = dmgZone;
 		damage_type = EnumTools.EnumToString(DamageType, damageType);
 		ammo_type = ammo;
+
+		component = hitComponent;
+		model_pos = hitModelPos;
+		speed_coef = hitSpeedCoef;
 	}
 }
 #endif

@@ -68,7 +68,7 @@ modded class PlayerBase
 	// * --- hit ---
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
-		LogZ_WorldLogger.WithHit(this, source, damageResult, damageType, dmgZone, ammo, LogZ_Level.INFO);
+		LogZ_WorldLogger.WithHit(this, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, LogZ_Level.INFO);
 
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
 	}

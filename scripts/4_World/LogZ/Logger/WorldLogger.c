@@ -92,11 +92,14 @@ class LogZ_WorldLogger
 	    \param source       Damage source (EntityAI) or null.
 	    \param damageResult TotalDamageResult or null.
 	    \param damageType   DamageType enum value.
+	    \param component    Hit component index from EEHitBy.
 	    \param dmgZone      Damage zone name.
 	    \param ammo         Ammo type name.
+	    \param modelPos     Hit position in the victim's model space.
+	    \param speedCoef    Projectile speed damage coefficient.
 	    \param lvl          Log level (default INFO).
 	*/
-	static void WithHit(Object victim, EntityAI source, TotalDamageResult damageResult, int damageType, string dmgZone, string ammo, LogZ_Level lvl = 2)
+	static void WithHit(Object victim, EntityAI source, TotalDamageResult damageResult, int damageType, int component, string dmgZone, string ammo, vector modelPos, float speedCoef, LogZ_Level lvl = 2)
 	{
 		if (!LogZ_Config.IsLoaded() || !victim || victim.IsDamageDestroyed() || !LogZ_Levels.IsEnabled(lvl))
 			return;
@@ -123,7 +126,7 @@ class LogZ_WorldLogger
 		if (LogZ_GameLogger.SerializeParentObject(victim, json))
 			dto.Insert("victim_parent", json);
 
-		LogZ_DTO_Damage damageDTO = new LogZ_DTO_Damage(damageResult, damageType, dmgZone, ammo);
+		LogZ_DTO_Damage damageDTO = new LogZ_DTO_Damage(damageResult, damageType, dmgZone, ammo, component, modelPos, speedCoef);
 		if (LogZ.GetSerializer().WriteToString(damageDTO, false, json))
 			dto.Insert("damage", json);
 
