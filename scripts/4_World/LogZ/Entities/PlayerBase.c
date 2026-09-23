@@ -202,12 +202,13 @@ modded class PlayerBase
 
 	override void OnDisconnect()
 	{
+		// server-only native (dayzplayer.c); read before the vanilla disconnect work runs
+		EClientKicked kickReason = GetKickOffReason();
+
 		super.OnDisconnect();
 
 		m_LogZ_InitDone = false;
-		LogZ_GameLogger.WithObject(
-		    this, "player disconnected",
-		    LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION);
+		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason);
 	}
 
 	// * --- unconscious ---
