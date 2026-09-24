@@ -225,6 +225,27 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log a periodic transport snapshot (WP-6).
+	    \details
+	        Wire event is SYSTEM_WORLD (no free enum bit) with msg "transport snapshot"; the
+	        LogZ_DTO_TransportState is the "object". The caller throttles and checks the driver.
+	*/
+	static void WithTransportSnapshot(CarScript car)
+	{
+		if (!LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.SYSTEM_WORLD))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		LogZ_DTO_TransportState state = new LogZ_DTO_TransportState(car);
+		if (LogZ.GetSerializer().WriteToString(state, false, json))
+			dto.Insert("object", json);
+
+		LogZ.Log("transport snapshot", LogZ_Level.INFO, LogZ_Event.SYSTEM_WORLD, dto);
+	}
+
+	/**
 	    \brief Log action start/end with attached context.
 	    \param action_data ActionData instance.
 	    \param isStart     True for start, false for end.
