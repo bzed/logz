@@ -246,6 +246,42 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log a session-forensics line for a player the server kills at logout or respawn (WP-7).
+	    \details
+	        Same payload as WithObject plus "unconscious" and "restrained" (1/0) and, when given,
+	        a top-level "kick_reason".
+	    \param player     Player being killed by the server.
+	    \param msg        Message string.
+	    \param kickReason EClientKicked name, or empty to omit (respawn has none).
+	*/
+	static void WithSessionKill(PlayerBase player, string msg, string kickReason)
+	{
+		if (!player || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("object", json);
+
+		if (kickReason != "")
+			dto.Insert("kick_reason", kickReason);
+
+		if (player.IsUnconscious())
+			dto.Insert("unconscious", "1");
+		else
+			dto.Insert("unconscious", "0");
+
+		if (player.IsRestrained())
+			dto.Insert("restrained", "1");
+		else
+			dto.Insert("restrained", "0");
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
+	}
+
+	/**
 	    \brief Log action start/end with attached context.
 	    \param action_data ActionData instance.
 	    \param isStart     True for start, false for end.
