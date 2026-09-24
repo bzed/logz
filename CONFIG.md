@@ -115,6 +115,11 @@ Changes require a server restart to take effect.
 * **`filters.skip_ai_snapshots`** (`bool`) = true -
   Skip AI (eAI) players in periodic snapshot events. AI has no `steam_id`;
   the analyzer ignores it anyway, so this only saves log volume.
+* **`filters.projectile_events`** (`bool`) = false -
+  Log where and how fast projectiles stop (`DayZGame.OnProjectileStopped*`) for
+  real-player shooters. Off by default: the volume is unmeasured and it is not
+  proven that the engine calls the callbacks for bullets on a dedicated server.
+  Rate limited by `throttling.projectile_ms`.
 * **`filters.skip_ai_weapon_fire`** (`bool`) = true -
   Skip AI (eAI) shooters in `WEAPON_FIRE` events. Fire events are
   unthrottled by default and eAI fires a lot; the analyzer ignores AI

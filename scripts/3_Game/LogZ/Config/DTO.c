@@ -186,6 +186,11 @@ class LogZ_ConfigDTO_Filters
 	// AI has no `steam_id`; the analyzer ignores it anyway, so this only saves log volume.
 	bool skip_ai_snapshots = true;
 
+	// Log where and how fast projectiles stop (DayZGame OnProjectileStopped*), for real-player shooters.
+	// Off by default: the volume is unmeasured and it is not proven that the engine calls the
+	// callbacks for bullets on a dedicated server. Rate limited by `throttling.projectile_ms`.
+	bool projectile_events;
+
 	// Skip AI (eAI) shooters in `WEAPON_FIRE` events.
 	// Fire events are unthrottled by default and eAI fires a lot; the analyzer ignores AI shooters.
 	bool skip_ai_weapon_fire = true;

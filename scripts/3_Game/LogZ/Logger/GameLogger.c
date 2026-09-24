@@ -11,6 +11,8 @@
 */
 class LogZ_GameLogger
 {
+	protected static ref map<int, int> s_ProjectileLastMs;
+
 	/**
 	    \brief Log message with single object payload.
 	    \details
@@ -68,6 +70,83 @@ class LogZ_GameLogger
 		dto.Insert("kick_reason", EnumTools.EnumToString(EClientKicked, kickReason));
 
 		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
+	}
+
+	/**
+	    \brief Log where a real player's projectile stopped (WP-11, opt-in).
+	    \details
+	        Called from the modded DayZGame.OnProjectileStopped* callbacks, which run on both sides,
+	        so it returns unless this is the dedicated server. Only shooters with an identity are
+	        logged, at most one line per shooter every throttling.projectile_ms. The source is the
+	        weapon or the player; the shooter is its hierarchy root player.
+	    \param info      Stop info from the engine.
+	    \param msg       Message string ("projectile stopped", "projectile hit terrain/object").
+	    \param hitObj    Object hit, or null.
+	    \param component Hit component index, -1 if none.
+	    \param water     Terrain hit was water.
+	*/
+	static void WithProjectile(ProjectileStoppedInfo info, string msg, Object hitObj, int component, bool water)
+	{
+		if (!info || !g_Game.IsDedicatedServer() || !LogZ_Config.IsLoaded() || !LogZ_Config.Get().filters.projectile_events)
+			return;
+
+		if (!LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.SYSTEM_GAME))
+			return;
+
+		EntityAI source = EntityAI.Cast(info.GetSource());
+		if (!source)
+			return;
+
+		Man shooter = source.GetHierarchyRootPlayer();
+		if (!shooter || !shooter.GetIdentity())
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.projectile_ms;
+		if (intervalMs > 0) {
+			if (!s_ProjectileLastMs)
+				s_ProjectileLastMs = new map<int, int>();
+
+			int now = g_Game.GetTime();
+			int shooterKey = shooter.GetID();
+			int last;
+			if (s_ProjectileLastMs.Find(shooterKey, last) && (now - last) < intervalMs)
+				return;
+
+			s_ProjectileLastMs.Set(shooterKey, now);
+		}
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (source != shooter && SerializeObject(source, json))
+			dto.Insert("attacker", json);
+
+		if (SerializeObject(shooter, json))
+			dto.Insert("attacker_parent", json);
+
+		if (hitObj && SerializeObject(hitObj, json))
+			dto.Insert("victim", json);
+
+		vector pos = info.GetPos();
+		vector velocity = info.GetInVelocity();
+		dto.Insert("pos", string.Format("%1 %2 %3", pos[0], pos[1], pos[2]));
+		dto.Insert("velocity", string.Format("%1 %2 %3", velocity[0], velocity[1], velocity[2]));
+		dto.Insert("ammo_type", info.GetAmmoType());
+		dto.Insert("projectile_damage", info.GetProjectileDamage().ToString());
+
+		if (component >= 0)
+			dto.Insert("component", component.ToString());
+
+		CollisionInfoBase collision = CollisionInfoBase.Cast(info);
+		if (collision) {
+			vector normal = collision.GetSurfNormal();
+			dto.Insert("surface_normal", string.Format("%1 %2 %3", normal[0], normal[1], normal[2]));
+		}
+
+		if (water)
+			dto.Insert("water", "1");
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.SYSTEM_GAME, dto);
 	}
 
 	/**
