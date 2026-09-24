@@ -192,6 +192,21 @@ class LogZ_WorldLogger
 		dto.Insert("stamina", shooter.GetStatStamina().Get().ToString());
 		dto.Insert("chance_to_jam", weapon.GetSyncChanceToJam().ToString());
 
+		// Rounds available for this muzzle (WP-9): chamber + internal magazine
+		// (GetTotalCartridgeCount does not include a detachable magazine, seen on the local server)
+		// plus the attached magazine. Whether the count is taken before or after the round of
+		// this shot left is checked on live data.
+		int ammoTotal = weapon.GetTotalCartridgeCount(muzzle);
+		int ammoMax = weapon.GetTotalMaxCartridgeCount(muzzle);
+		Magazine attachedMag = weapon.GetMagazine(muzzle);
+		if (attachedMag) {
+			ammoTotal += attachedMag.GetAmmoCount();
+			ammoMax += attachedMag.GetAmmoMax();
+		}
+
+		dto.Insert("ammo_total", ammoTotal.ToString());
+		dto.Insert("ammo_max", ammoMax.ToString());
+
 		if (weapon.IsJammed())
 			dto.Insert("is_jammed", "1");
 		else
