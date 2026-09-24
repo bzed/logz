@@ -8,10 +8,9 @@
 /**
     \brief Serializable movement/stamina snapshot of a player (top-level "movement" key).
     \details
-        Contract-only until the player snapshot sampler lands (WP-5); nothing
-        serializes this class yet. Stamina configuration comes from the server's
-        cfggameplay.json, so the analyzer must compare against the values emitted
-        here, never against vanilla constants.
+        Filled by PlayerBase.LogZ_Snapshot (WP-5). Stamina configuration comes from the
+        server's cfggameplay.json, so the analyzer must compare against the values
+        emitted here, never against vanilla constants.
 */
 class LogZ_DTO_Movement
 {
@@ -35,5 +34,39 @@ class LogZ_DTO_Movement
 	// Connection quality (PlayerIdentity)
 	int ping_avg;
 	int ping_max;
+
+	/**
+	    \brief Sample the player's current movement, stamina and server stamina config.
+	*/
+	void LogZ_DTO_Movement(PlayerBase player)
+	{
+		HumanMovementState state = new HumanMovementState();
+		player.GetMovementState(state);
+		stance = state.m_iStanceIdx;
+		movement = state.m_iMovement;
+		lean = state.m_fLeaning;
+
+		is_sprinting = player.IsSprinting();
+		sprint_full = player.IsSprintFull();
+		velocity = GetVelocity(player);
+
+		stamina = player.GetStatStamina().Get();
+		StaminaHandler handler = player.GetStaminaHandler();
+		if (handler)
+			stamina_cap = handler.GetStaminaCap();
+
+		stamina_max = CfgGameplayHandler.GetStaminaMax();
+		stamina_min_cap = CfgGameplayHandler.GetStaminaMinCap();
+		sprint_drain_erc = CfgGameplayHandler.GetSprintStaminaModifierErc();
+		sprint_drain_cro = CfgGameplayHandler.GetSprintStaminaModifierCro();
+		cfg_gameplay_enabled = g_Game.ServerConfigGetInt("enableCfgGameplayFile");
+		cfg_gameplay_version = CfgGameplayHandler.m_Data.version;
+
+		PlayerIdentity identity = player.GetIdentity();
+		if (identity) {
+			ping_avg = identity.GetPingAvg();
+			ping_max = identity.GetPingMax();
+		}
+	}
 }
 #endif

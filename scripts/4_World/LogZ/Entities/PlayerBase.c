@@ -10,6 +10,7 @@ modded class PlayerBase
 {
 	protected bool m_LogZ_InitDone;
 	protected bool m_LogZ_Killed;
+	protected int m_LogZ_LastSnapshotTime;
 
 	bool LogZ_ShouldLogged()
 	{
@@ -209,6 +210,36 @@ modded class PlayerBase
 
 		m_LogZ_InitDone = false;
 		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason);
+	}
+
+	// * --- movement snapshot ---
+	// Server-side: MissionServer.TickScheduler calls OnTick -> OnScheduledTick for each
+	// connected player. Players without an identity (eAI) are skipped when
+	// filters.skip_ai_snapshots is set.
+	override void OnScheduledTick(float deltaTime)
+	{
+		super.OnScheduledTick(deltaTime);
+		LogZ_Snapshot();
+	}
+
+	protected void LogZ_Snapshot()
+	{
+		if (!LogZ_Config.IsLoaded() || !IsPlayerSelected() || !IsAlive())
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.player_snapshot_s * 1000;
+		if (intervalMs <= 0)
+			return;
+
+		if (LogZ_Config.Get().filters.skip_ai_snapshots && !GetIdentity())
+			return;
+
+		int time = g_Game.GetTime();
+		if ((time - m_LogZ_LastSnapshotTime) < intervalMs)
+			return;
+
+		m_LogZ_LastSnapshotTime = time;
+		LogZ_WorldLogger.WithPlayerSnapshot(this);
 	}
 
 	// * --- unconscious ---

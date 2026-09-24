@@ -201,6 +201,30 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log a periodic movement/stamina snapshot of a player (WP-5).
+	    \details
+	        Wire event is PLAYER_ACTIVITY (no free enum bit) with msg "player snapshot"; the
+	        player is the "player" key, the sample the "movement" key. The caller throttles.
+	*/
+	static void WithPlayerSnapshot(PlayerBase player)
+	{
+		if (!LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_ACTIVITY))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("player", json);
+
+		LogZ_DTO_Movement movement = new LogZ_DTO_Movement(player);
+		if (LogZ.GetSerializer().WriteToString(movement, false, json))
+			dto.Insert("movement", json);
+
+		LogZ.Log("player snapshot", LogZ_Level.INFO, LogZ_Event.PLAYER_ACTIVITY, dto);
+	}
+
+	/**
 	    \brief Log action start/end with attached context.
 	    \param action_data ActionData instance.
 	    \param isStart     True for start, false for end.
