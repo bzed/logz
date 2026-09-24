@@ -22,6 +22,7 @@ class LogZ_DTO_Movement
 	float stamina;
 	float stamina_cap;
 	vector velocity;
+	bool allow_damage; // Object.GetAllowDamage(): false = godmode, visible without the player acting
 
 	// Server stamina configuration (CfgGameplayHandler)
 	float stamina_max;
@@ -51,6 +52,7 @@ class LogZ_DTO_Movement
 		is_sprinting = (state.m_iMovement == DayZPlayerConstants.MOVEMENT_SPRINT);
 		sprint_full = player.IsSprintFull();
 		velocity = GetVelocity(player);
+		allow_damage = player.GetAllowDamage();
 
 		stamina = player.GetStatStamina().Get();
 		StaminaHandler handler = player.GetStaminaHandler();
