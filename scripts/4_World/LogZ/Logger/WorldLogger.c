@@ -282,6 +282,29 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log a player connect with the hive's login-position flag (WP-7).
+	    \param player               Connecting player.
+	    \param msg                  Message string.
+	    \param loginPositionChanged 1 or 0 from Hive.CharacterIsLoginPositionChanged, -1 = unavailable.
+	*/
+	static void WithConnect(PlayerBase player, string msg, int loginPositionChanged)
+	{
+		if (!player || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("object", json);
+
+		if (loginPositionChanged >= 0)
+			dto.Insert("login_position_changed", loginPositionChanged.ToString());
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
+	}
+
+	/**
 	    \brief Log action start/end with attached context.
 	    \param action_data ActionData instance.
 	    \param isStart     True for start, false for end.

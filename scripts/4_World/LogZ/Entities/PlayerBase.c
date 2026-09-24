@@ -184,12 +184,23 @@ modded class PlayerBase
 
 	override void OnConnect()
 	{
+		// Hive.CharacterIsLoginPositionChanged is "only valid during login" (hive.c) and OnConnect
+		// is called from MissionServer.InvokeOnConnect while the player logs in; read it before
+		// the vanilla connect work. -1 = no hive, the field is omitted. Whether the value is
+		// meaningful here is verified on live data (analyzer plan, "Login position").
+		int loginPositionChanged = -1;
+		Hive hive = GetHive();
+		if (hive) {
+			if (hive.CharacterIsLoginPositionChanged(this))
+				loginPositionChanged = 1;
+			else
+				loginPositionChanged = 0;
+		}
+
 		super.OnConnect();
 
 		m_LogZ_InitDone = true;
-		LogZ_GameLogger.WithObject(
-		    this, "player connected",
-		    LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION);
+		LogZ_WorldLogger.WithConnect(this, "player connected", loginPositionChanged);
 	}
 
 	override void OnReconnect()
