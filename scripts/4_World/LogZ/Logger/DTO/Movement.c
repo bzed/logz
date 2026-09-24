@@ -46,7 +46,9 @@ class LogZ_DTO_Movement
 		movement = state.m_iMovement;
 		lean = state.m_fLeaning;
 
-		is_sprinting = player.IsSprinting();
+		// not player.IsSprinting(): it reads the cached m_MovementState, which is not refreshed for
+		// a remote player on the server (livonia: always 0 while movement was sprint)
+		is_sprinting = (state.m_iMovement == DayZPlayerConstants.MOVEMENT_SPRINT);
 		sprint_full = player.IsSprintFull();
 		velocity = GetVelocity(player);
 
