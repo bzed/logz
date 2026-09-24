@@ -115,7 +115,10 @@ cd <DayZServer> && timeout 60 ./DayZServer -config=<serverDZ copy> -profiles=<sc
 
 - Success is visible in `<profile>/script_*.log`: the Game module must report more than the
   vanilla 416 files, and `LogZ: loaded ...` must appear; output lands in `<profile>/logz/logs/`.
-  `SCRIPT (E)` lines are compile errors. Do not `pkill -f DayZServer` from the same shell
+  `SCRIPT    (E)` lines are compile errors (grep `'SCRIPT.*(E)'`; the tag is space-padded, so a
+  literal `SCRIPT (E)` never matches). Only a server boot proves a `modded class`/`override`
+  compiles: engine classes (`DayZPlayerInventory`) cannot be modded and `proto native`
+  methods (`SendSyncJuncture`) cannot be overridden, and `validate.sh` accepts both. Do not `pkill -f DayZServer` from the same shell
   command line (it matches itself).
 - There is no client, so hooks driven by players need a scratch copy of the mod with a
   debug call (spawn `g_Game.CreatePlayer(null, ...)`, `CreateInHands`, call the method).
