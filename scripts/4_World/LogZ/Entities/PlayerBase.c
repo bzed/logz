@@ -11,6 +11,8 @@ modded class PlayerBase
 	protected bool m_LogZ_InitDone;
 	protected bool m_LogZ_Killed;
 	protected int m_LogZ_LastSnapshotTime;
+	protected string m_LogZ_SteamId;
+	protected string m_LogZ_PlayerName;
 
 	bool LogZ_ShouldLogged()
 	{
@@ -182,8 +184,23 @@ modded class PlayerBase
 		    LogZ_Level.DEBUG, LogZ_Event.PLAYER_SESSION);
 	}
 
+	// The identity is released before OnDisconnect runs when the network or BattlEye ends the session
+	// (UNSTABLE_NETWORK, TIMEOUT, AUTH_CANCELED, BATTLEYE), so the disconnect line would name nobody.
+	// Remember it while it is available.
+	protected void LogZ_RememberIdentity()
+	{
+		PlayerIdentity identity = GetIdentity();
+		if (!identity)
+			return;
+
+		m_LogZ_SteamId = identity.GetPlainId();
+		m_LogZ_PlayerName = identity.GetName();
+	}
+
 	override void OnConnect()
 	{
+		LogZ_RememberIdentity();
+
 		// Hive.CharacterIsLoginPositionChanged is "only valid during login" (hive.c) and OnConnect
 		// is called from MissionServer.InvokeOnConnect while the player logs in; read it before
 		// the vanilla connect work. -1 = no hive, the field is omitted. Whether the value is
@@ -220,7 +237,7 @@ modded class PlayerBase
 		super.OnDisconnect();
 
 		m_LogZ_InitDone = false;
-		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason);
+		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason, m_LogZ_SteamId, m_LogZ_PlayerName);
 	}
 
 	// * --- movement snapshot ---
@@ -250,6 +267,7 @@ modded class PlayerBase
 			return;
 
 		m_LogZ_LastSnapshotTime = time;
+		LogZ_RememberIdentity();
 		LogZ_WorldLogger.WithPlayerSnapshot(this);
 	}
 

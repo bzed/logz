@@ -55,8 +55,10 @@ class LogZ_GameLogger
 	    \param obj        Disconnecting player.
 	    \param msg        Message string.
 	    \param kickReason EClientKicked value from GetKickOffReason().
+	    \param steamId    Remembered steam id, written as top-level "steam_id" when the object lost its identity.
+	    \param playerName Remembered player name, same rule.
 	*/
-	static void WithDisconnect(Object obj, string msg, EClientKicked kickReason)
+	static void WithDisconnect(Object obj, string msg, EClientKicked kickReason, string steamId = "", string playerName = "")
 	{
 		if (!obj || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
 			return;
@@ -68,6 +70,13 @@ class LogZ_GameLogger
 			dto.Insert("object", json);
 
 		dto.Insert("kick_reason", EnumTools.EnumToString(EClientKicked, kickReason));
+
+		// only when the serialized object names nobody (identity already released)
+		Man man;
+		if (steamId != "" && Class.CastTo(man, obj) && !man.GetIdentity()) {
+			dto.Insert("steam_id", steamId);
+			dto.Insert("player_name", playerName);
+		}
 
 		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
 	}
@@ -129,8 +138,8 @@ class LogZ_GameLogger
 
 		vector pos = info.GetPos();
 		vector velocity = info.GetInVelocity();
-		dto.Insert("pos", string.Format("%1 %2 %3", pos[0], pos[1], pos[2]));
-		dto.Insert("velocity", string.Format("%1 %2 %3", velocity[0], velocity[1], velocity[2]));
+		dto.Insert("pos", string.Format("[%1,%2,%3]", pos[0], pos[1], pos[2]));
+		dto.Insert("velocity", string.Format("[%1,%2,%3]", velocity[0], velocity[1], velocity[2]));
 		dto.Insert("ammo_type", info.GetAmmoType());
 		dto.Insert("projectile_damage", info.GetProjectileDamage().ToString());
 
@@ -140,7 +149,7 @@ class LogZ_GameLogger
 		CollisionInfoBase collision = CollisionInfoBase.Cast(info);
 		if (collision) {
 			vector normal = collision.GetSurfNormal();
-			dto.Insert("surface_normal", string.Format("%1 %2 %3", normal[0], normal[1], normal[2]));
+			dto.Insert("surface_normal", string.Format("[%1,%2,%3]", normal[0], normal[1], normal[2]));
 		}
 
 		if (water)

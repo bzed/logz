@@ -21,6 +21,12 @@ class LogZ_DTO_Movement
 	bool sprint_full; // DayZPlayerImplement m_SprintFull
 	float stamina;
 	float stamina_cap;
+
+	// Vitals beyond the health/blood/shock of the player DTO (PlayerStat), so an admin-set value
+	// shows as a jump between two snapshots
+	float water;
+	float energy;
+	float heat_comfort;
 	vector velocity;
 	bool allow_damage; // Object.GetAllowDamage(): false = godmode, visible without the player acting
 
@@ -55,6 +61,9 @@ class LogZ_DTO_Movement
 		allow_damage = player.GetAllowDamage();
 
 		stamina = player.GetStatStamina().Get();
+		water = player.GetStatWater().Get();
+		energy = player.GetStatEnergy().Get();
+		heat_comfort = player.GetStatHeatComfort().Get();
 		StaminaHandler handler = player.GetStaminaHandler();
 		if (handler)
 			stamina_cap = handler.GetStaminaCap();
