@@ -27,6 +27,9 @@ class LogZ_DTO_Movement
 	float water;
 	float energy;
 	float heat_comfort;
+	float heat_buffer;
+	float wet;
+	float toxicity;
 	vector velocity;
 	bool allow_damage; // Object.GetAllowDamage(): false = godmode, visible without the player acting
 
@@ -66,6 +69,9 @@ class LogZ_DTO_Movement
 		water = player.GetStatWater().Get();
 		energy = player.GetStatEnergy().Get();
 		heat_comfort = player.GetStatHeatComfort().Get();
+		heat_buffer = player.GetStatHeatBuffer().Get();
+		wet = player.GetStatWet().Get();
+		toxicity = player.GetStatToxicity().Get();
 		StaminaHandler handler = player.GetStaminaHandler();
 		if (handler)
 			stamina_cap = handler.GetStaminaCap();
