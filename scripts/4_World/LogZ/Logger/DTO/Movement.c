@@ -53,9 +53,11 @@ class LogZ_DTO_Movement
 		movement = state.m_iMovement;
 		lean = state.m_fLeaning;
 
-		// not player.IsSprinting(): it reads the cached m_MovementState, which is not refreshed for
-		// a remote player on the server (livonia: always 0 while movement was sprint)
-		is_sprinting = (state.m_iMovement == DayZPlayerConstants.MOVEMENT_SPRINT);
+		// Not player.IsSprinting(), and not DayZPlayerConstants.MOVEMENT_SPRINT: m_iMovement holds the
+		// movement *index* (MOVEMENTIDX_*: 0 idle, 1 walk, 2 run, 3 sprint), while MOVEMENT_SPRINT is a
+		// mask constant with another value, which is what vanilla IsSprinting() compares against
+		// (livonia and onlyup: 0 on every snapshot, including tier 3 at 6.7 m/s).
+		is_sprinting = (state.m_iMovement == DayZPlayerConstants.MOVEMENTIDX_SPRINT);
 		sprint_full = player.IsSprintFull();
 		velocity = GetVelocity(player);
 		allow_damage = player.GetAllowDamage();
