@@ -192,12 +192,131 @@ class LogZ_WorldLogger
 		dto.Insert("stamina", shooter.GetStatStamina().Get().ToString());
 		dto.Insert("chance_to_jam", weapon.GetSyncChanceToJam().ToString());
 
+		// Rounds available for this muzzle (WP-9): chamber + internal magazine
+		// (GetTotalCartridgeCount does not include a detachable magazine, seen on the local server)
+		// plus the attached magazine. Whether the count is taken before or after the round of
+		// this shot left is checked on live data.
+		int ammoTotal = weapon.GetTotalCartridgeCount(muzzle);
+		int ammoMax = weapon.GetTotalMaxCartridgeCount(muzzle);
+		Magazine attachedMag = weapon.GetMagazine(muzzle);
+		if (attachedMag) {
+			ammoTotal += attachedMag.GetAmmoCount();
+			ammoMax += attachedMag.GetAmmoMax();
+		}
+
+		dto.Insert("ammo_total", ammoTotal.ToString());
+		dto.Insert("ammo_max", ammoMax.ToString());
+
 		if (weapon.IsJammed())
 			dto.Insert("is_jammed", "1");
 		else
 			dto.Insert("is_jammed", "0");
 
 		LogZ.Log("weapon fired", LogZ_Level.INFO, LogZ_Event.WEAPON_FIRE, dto);
+	}
+
+	/**
+	    \brief Log a periodic movement/stamina snapshot of a player (WP-5).
+	    \details
+	        Wire event is PLAYER_ACTIVITY (no free enum bit) with msg "player snapshot"; the
+	        player is the "player" key, the sample the "movement" key. The caller throttles.
+	*/
+	static void WithPlayerSnapshot(PlayerBase player)
+	{
+		if (!LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_ACTIVITY))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("player", json);
+
+		LogZ_DTO_Movement movement = new LogZ_DTO_Movement(player);
+		if (LogZ.GetSerializer().WriteToString(movement, false, json))
+			dto.Insert("movement", json);
+
+		LogZ.Log("player snapshot", LogZ_Level.INFO, LogZ_Event.PLAYER_ACTIVITY, dto);
+	}
+
+	/**
+	    \brief Log a periodic transport snapshot (WP-6).
+	    \details
+	        Wire event is SYSTEM_WORLD (no free enum bit) with msg "transport snapshot"; the
+	        LogZ_DTO_TransportState is the "object". The caller throttles and checks the driver.
+	*/
+	static void WithTransportSnapshot(CarScript car)
+	{
+		if (!LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.SYSTEM_WORLD))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		LogZ_DTO_TransportState state = new LogZ_DTO_TransportState(car);
+		if (LogZ.GetSerializer().WriteToString(state, false, json))
+			dto.Insert("object", json);
+
+		LogZ.Log("transport snapshot", LogZ_Level.INFO, LogZ_Event.SYSTEM_WORLD, dto);
+	}
+
+	/**
+	    \brief Log a session-forensics line for a player the server kills at logout or respawn (WP-7).
+	    \details
+	        Same payload as WithObject plus "unconscious" and "restrained" (1/0) and, when given,
+	        a top-level "kick_reason".
+	    \param player     Player being killed by the server.
+	    \param msg        Message string.
+	    \param kickReason EClientKicked name, or empty to omit (respawn has none).
+	*/
+	static void WithSessionKill(PlayerBase player, string msg, string kickReason)
+	{
+		if (!player || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("object", json);
+
+		if (kickReason != "")
+			dto.Insert("kick_reason", kickReason);
+
+		if (player.IsUnconscious())
+			dto.Insert("unconscious", "1");
+		else
+			dto.Insert("unconscious", "0");
+
+		if (player.IsRestrained())
+			dto.Insert("restrained", "1");
+		else
+			dto.Insert("restrained", "0");
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
+	}
+
+	/**
+	    \brief Log a player connect with the hive's login-position flag (WP-7).
+	    \param player               Connecting player.
+	    \param msg                  Message string.
+	    \param loginPositionChanged 1 or 0 from Hive.CharacterIsLoginPositionChanged, -1 = unavailable.
+	*/
+	static void WithConnect(PlayerBase player, string msg, int loginPositionChanged)
+	{
+		if (!player || !LogZ_Levels.IsEnabled(LogZ_Level.INFO) || !LogZ_Events.IsEnabled(LogZ_Event.PLAYER_SESSION))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(player, json))
+			dto.Insert("object", json);
+
+		if (loginPositionChanged >= 0)
+			dto.Insert("login_position_changed", loginPositionChanged.ToString());
+
+		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION, dto);
 	}
 
 	/**

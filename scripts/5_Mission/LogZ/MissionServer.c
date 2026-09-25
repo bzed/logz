@@ -28,6 +28,32 @@ modded class MissionServer
 	}
 
 	/**
+	    \brief Log the combat-log kill before the vanilla body handling applies it.
+	    \details
+	        MissionServer.PlayerDisconnected calls HandleBody after OnDisconnect; a live,
+	        unconscious or restrained player is killed there when ShouldPlayerBeKilled says so.
+	        Without this line the death looks like a combat death.
+	*/
+	override void HandleBody(PlayerBase player)
+	{
+		if (player && player.IsAlive() && ShouldPlayerBeKilled(player))
+			LogZ_WorldLogger.WithSessionKill(player, "player killed on logout (unconscious/restrained)", EnumTools.EnumToString(EClientKicked, player.GetKickOffReason()));
+
+		super.HandleBody(player);
+	}
+
+	/**
+	    \brief Log a respawn of an unconscious or restrained player (vanilla kills it).
+	*/
+	override void OnClientRespawnEvent(PlayerIdentity identity, PlayerBase player)
+	{
+		if (player && (player.IsUnconscious() || player.IsRestrained()))
+			LogZ_WorldLogger.WithSessionKill(player, "player killed on respawn (unconscious/restrained)", "");
+
+		super.OnClientRespawnEvent(identity, player);
+	}
+
+	/**
 	    \brief Close LogZ on mission finish after base handler.
 	*/
 	override void OnMissionFinish()

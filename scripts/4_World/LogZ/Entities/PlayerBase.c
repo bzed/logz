@@ -10,6 +10,9 @@ modded class PlayerBase
 {
 	protected bool m_LogZ_InitDone;
 	protected bool m_LogZ_Killed;
+	protected int m_LogZ_LastSnapshotTime;
+	protected string m_LogZ_SteamId;
+	protected string m_LogZ_PlayerName;
 
 	bool LogZ_ShouldLogged()
 	{
@@ -181,14 +184,40 @@ modded class PlayerBase
 		    LogZ_Level.DEBUG, LogZ_Event.PLAYER_SESSION);
 	}
 
+	// The identity is released before OnDisconnect runs when the network or BattlEye ends the session
+	// (UNSTABLE_NETWORK, TIMEOUT, AUTH_CANCELED, BATTLEYE), so the disconnect line would name nobody.
+	// Remember it while it is available.
+	protected void LogZ_RememberIdentity()
+	{
+		PlayerIdentity identity = GetIdentity();
+		if (!identity)
+			return;
+
+		m_LogZ_SteamId = identity.GetPlainId();
+		m_LogZ_PlayerName = identity.GetName();
+	}
+
 	override void OnConnect()
 	{
+		LogZ_RememberIdentity();
+
+		// Hive.CharacterIsLoginPositionChanged is "only valid during login" (hive.c) and OnConnect
+		// is called from MissionServer.InvokeOnConnect while the player logs in; read it before
+		// the vanilla connect work. -1 = no hive, the field is omitted. Whether the value is
+		// meaningful here is verified on live data (analyzer plan, "Login position").
+		int loginPositionChanged = -1;
+		Hive hive = GetHive();
+		if (hive) {
+			if (hive.CharacterIsLoginPositionChanged(this))
+				loginPositionChanged = 1;
+			else
+				loginPositionChanged = 0;
+		}
+
 		super.OnConnect();
 
 		m_LogZ_InitDone = true;
-		LogZ_GameLogger.WithObject(
-		    this, "player connected",
-		    LogZ_Level.INFO, LogZ_Event.PLAYER_SESSION);
+		LogZ_WorldLogger.WithConnect(this, "player connected", loginPositionChanged);
 	}
 
 	override void OnReconnect()
@@ -208,7 +237,38 @@ modded class PlayerBase
 		super.OnDisconnect();
 
 		m_LogZ_InitDone = false;
-		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason);
+		LogZ_GameLogger.WithDisconnect(this, "player disconnected", kickReason, m_LogZ_SteamId, m_LogZ_PlayerName);
+	}
+
+	// * --- movement snapshot ---
+	// Server-side: MissionServer.TickScheduler calls OnTick -> OnScheduledTick for each
+	// connected player. Players without an identity (eAI) are skipped when
+	// filters.skip_ai_snapshots is set.
+	override void OnScheduledTick(float deltaTime)
+	{
+		super.OnScheduledTick(deltaTime);
+		LogZ_Snapshot();
+	}
+
+	protected void LogZ_Snapshot()
+	{
+		if (!LogZ_Config.IsLoaded() || !IsPlayerSelected() || !IsAlive())
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.player_snapshot_s * 1000;
+		if (intervalMs <= 0)
+			return;
+
+		if (LogZ_Config.Get().filters.skip_ai_snapshots && !GetIdentity())
+			return;
+
+		int time = g_Game.GetTime();
+		if ((time - m_LogZ_LastSnapshotTime) < intervalMs)
+			return;
+
+		m_LogZ_LastSnapshotTime = time;
+		LogZ_RememberIdentity();
+		LogZ_WorldLogger.WithPlayerSnapshot(this);
 	}
 
 	// * --- unconscious ---

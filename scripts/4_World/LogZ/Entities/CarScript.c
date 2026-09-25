@@ -10,6 +10,7 @@ modded class CarScript
 {
 	protected bool m_LogZ_InitDone;
 	protected bool m_LogZ_Killed;
+	protected int m_LogZ_LastSnapshotTime;
 
 	bool LogZ_ShouldLogged(bool input)
 	{
@@ -25,6 +26,40 @@ modded class CarScript
 	bool LogZ_IsAlreadyKilled()
 	{
 		return m_LogZ_Killed;
+	}
+
+	// * --- telemetry snapshot ---
+	// Server-side: CarScript.EOnPostSimulate itself branches on g_Game.IsServer(). Only cars
+	// with a driver are sampled; a driver without identity (an eAI convoy) is skipped when
+	// filters.skip_ai_snapshots is set.
+	override void EOnPostSimulate(IEntity other, float timeSlice)
+	{
+		super.EOnPostSimulate(other, timeSlice);
+		LogZ_Snapshot();
+	}
+
+	protected void LogZ_Snapshot()
+	{
+		if (!LogZ_Config.IsLoaded() || !g_Game.IsServer())
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.transport_snapshot_s * 1000;
+		if (intervalMs <= 0)
+			return;
+
+		int time = g_Game.GetTime();
+		if ((time - m_LogZ_LastSnapshotTime) < intervalMs)
+			return;
+
+		Man driver = Man.Cast(CrewMember(DayZPlayerConstants.VEHICLESEAT_DRIVER));
+		if (!driver)
+			return;
+
+		if (LogZ_Config.Get().filters.skip_ai_snapshots && !driver.GetIdentity())
+			return;
+
+		m_LogZ_LastSnapshotTime = time;
+		LogZ_WorldLogger.WithTransportSnapshot(this);
 	}
 
 	// * --- create ---
