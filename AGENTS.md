@@ -101,20 +101,34 @@ pbo -H prefix=logz <output>/logz.pbo -C . config.cpp scripts LICENSE
   if a server ever refuses to load the mod, convert with the Windows DayZ
   Tools first.
 
-### 3a. Testing on the local dedicated server (headless, verified 2026-09-23)
+### 3a. Testing on the local dedicated server (headless, verified 2026-09-26)
 
-`~/.steam/debian-installation/steamapps/common/DayZServer` is a vanilla install. The server
-is ready in seconds (landscape ~1.3 s, mission ~8 s) and then idles with no players — a quiet
-script log is not a stall. Copy `build/@LogZ` into that directory, then run it with a scratch
-profile so nothing is written into the install:
+The Steam-installed DayZ Server (`~/.steam/debian-installation/steamapps/common/DayZServer`,
+found by the dayz-dev skill's `scripts/find-dayzserver.sh`) is **never written to**: no copied
+mods, no edited configs, no profiles, no crash dumps, no mission persistence. Run the server
+from our own tree, `~/workspace/dayz/testserver`, which symlinks into the Steam install and is
+built or refreshed (after a Steam update) with the skill's `scripts/make-server-tree.sh`. The
+tree has its own `serverDZ.cfg`, `profiles/`, and mission directories of per-file symlinks, so
+`storage_1/` persistence stays in the tree. The mod is a symlink to the build output, so a
+rebuild needs no copy step:
 
 ```sh
-cd <DayZServer> && timeout 60 ./DayZServer -config=<serverDZ copy> -profiles=<scratch>/profile \
-    -servermod=@LogZ -port=2402 -nosplash -nopause -dologs
+bash tools/build-linux.sh
+ln -sfn "$PWD/build/@LogZ" ~/workspace/dayz/testserver/@LogZ     # once
+cd ~/workspace/dayz/testserver && ulimit -c 0 && timeout -k 15 60 ./DayZServer \
+    -config=serverDZ.cfg -profiles=profiles -servermod=@LogZ -port=2402 -nosplash -nopause -dologs
 ```
 
-- Success is visible in `<profile>/script_*.log`: the Game module must report more than the
-  vanilla 416 files, and `LogZ: loaded ...` must appear; output lands in `<profile>/logz/logs/`.
+- Mod paths (`-servermod=`, `-mod=`) must be **relative** to the server directory. An absolute
+  path is silently ignored: the server boots vanilla, with no error. Other mods, such as
+  workshop items, are symlinked into the tree as `@Name` the same way (see the skill's
+  `testing/local-server.md`).
+- The server is ready in seconds (landscape ~1.3 s, mission ~8 s) and then idles with no
+  players. A quiet script log is not a stall.
+- Keep `-k 15`. After a clean shutdown the process sometimes hangs in Steam API threads, and
+  only the SIGKILL ends it. In `ps` it shows up as `enfMain`.
+- Success is visible in `profiles/script_*.log`: the Game module must report more than the
+  vanilla 416 files, and `LogZ: loaded ...` must appear; output lands in `profiles/logz/logs/`.
   `SCRIPT    (E)` lines are compile errors (grep `'SCRIPT.*(E)'`; the tag is space-padded, so a
   literal `SCRIPT (E)` never matches). Only a server boot proves a `modded class`/`override`
   compiles: engine classes (`DayZPlayerInventory`) cannot be modded and `proto native`
