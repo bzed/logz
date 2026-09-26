@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning][].
   BaseBuilding code locks: wrong code, unlocked, code set, code changed (with
   `was_locked`, `known_user`), locked; codes are never logged. Shipped as a
   second addon `logz_expansion.pbo` that is inert without Expansion
+* `BASE_BUILDING` event (`base.building`, numeric mask only) for DayZ Expansion
+  BaseBuilding: territory create/delete/invite/join/kick/promote/demote/leave,
+  object placement (with the distance to the player), base part
+  built/dismantled/destroyed, admin hammer builds, raid damage and tool cycles,
+  flag dismantle, C4 detonation. Every line carries the territory of the
+  object and whether the player is a member of it. Code lock lines now carry
+  the lock's territory as well
+* extra fields whose key ends in `_uid` are always written as strings (Steam
+  ids exceed 2^53 and were emitted as JSON numbers)
 
 ### Changed
 

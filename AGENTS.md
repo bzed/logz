@@ -31,6 +31,7 @@ scripts/4_World/LogZ/   entity hooks (PlayerBase, Weapon_Base, CarScript, ...)
                         and WorldLogger
 scripts/5_Mission/LogZ/ MissionServer / ColletorLogZ
 expansion/              second addon logz_expansion.pbo: hooks for DayZ Expansion
+                        (BaseBuilding.c code locks, Territory.c, Structures.c)
 tools/                  validation, doc generation, formatting, build
 ```
 
@@ -49,6 +50,17 @@ CF 1559212036, Dabs 2545327648, Licensed 2116157322, Animations 2793893086), Exp
 (2291785308) and Core plus standalone BaseBuilding (2792982513), all symlinked into the test tree.
 Expansion's lock RPC handlers need a PlayerIdentity; headless tests call them with `null` and get a
 VM exception inside Expansion's code (it continues), so the `player` field is only proven with a client.
+
+**Test rule for anything Expansion-related (standing instruction):**
+1. Always test that logz loads and runs properly **without** Expansion: a run with only `@LogZ`
+   (both PBOs) must show no script errors and the vanilla script module counts, with only the
+   harmless `Addon 'LogZ_Expansion_BaseBuilding' requires addon ...` warning.
+2. Test every Expansion change with the **appropriate modules loaded**: the hooks of a part
+   (BaseBuilding, AI, ...) are verified with that part's scripts present (the bundle, and the
+   standalone part plus its Core), and a part that is *not* loaded must still boot cleanly
+   (e.g. Core alone, without BaseBuilding).
+3. Clear the test tree's `mpmissions/*/storage_1` between Expansion and vanilla runs, else
+   Expansion-saved items make the vanilla run throw "Scripted variables corrupted".
 
 Vanilla classes being modded live in `../dayz-sources/scripts/` — read them
 there before changing a hook; never edit or copy from that tree into a commit.
