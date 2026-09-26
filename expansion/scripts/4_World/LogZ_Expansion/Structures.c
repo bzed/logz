@@ -41,6 +41,36 @@ class LogZ_ExpansionStructures
 	}
 
 	/**
+	    \brief Whether Expansion lets this item type be placed or built in an enemy territory
+	        (BaseBuilding settings DeployableInsideAEnemyTerritory), "1" or "0".
+	*/
+	static string EnemyTerritoryOk(EntityAI item)
+	{
+		auto settings = GetExpansionSettings().GetBaseBuilding(false);
+		if (!item || !settings || !settings.IsLoaded())
+			return "0";
+
+		foreach (string deployable : settings.DeployableInsideAEnemyTerritory) {
+			if (item.IsKindOf(deployable))
+				return "1";
+		}
+
+		return "0";
+	}
+
+	/**
+	    \brief Whether the settings let non-members dismantle in a territory (DismantleInsideTerritory).
+	*/
+	static string DismantleForeignOk()
+	{
+		auto settings = GetExpansionSettings().GetBaseBuilding(false);
+		if (settings && settings.IsLoaded())
+			return LogZ_ExpansionLogger.Flag(settings.DismantleInsideTerritory);
+
+		return "0";
+	}
+
+	/**
 	    \brief Log a part event of a base structure.
 	*/
 	static void WithPart(BaseBuildingBase structure, string msg, LogZ_Level lvl, Man man, string part, int actionId, map<string, string> more = null)
@@ -67,26 +97,35 @@ modded class BaseBuildingBase
 	override void OnPartBuiltServer(notnull Man player, string part_name, int action_id)
 	{
 		super.OnPartBuiltServer(player, part_name, action_id);
-		LogZ_ExpansionStructures.WithPart(this, "base part built", LogZ_Level.INFO, player, part_name, action_id);
+
+		ref map<string, string> more = new map<string, string>();
+		more.Insert("enemy_territory_ok", LogZ_ExpansionStructures.EnemyTerritoryOk(this));
+		LogZ_ExpansionStructures.WithPart(this, "base part built", LogZ_Level.INFO, player, part_name, action_id, more);
 	}
 
 	override void OnPartDismantledServer(notnull Man player, string part_name, int action_id)
 	{
 		super.OnPartDismantledServer(player, part_name, action_id);
-		LogZ_ExpansionStructures.WithPart(this, "base part dismantled", LogZ_Level.INFO, player, part_name, action_id);
+
+		ref map<string, string> more = new map<string, string>();
+		more.Insert("dismantle_foreign_ok", LogZ_ExpansionStructures.DismantleForeignOk());
+		LogZ_ExpansionStructures.WithPart(this, "base part dismantled", LogZ_Level.INFO, player, part_name, action_id, more);
 	}
 
 	override void OnPartDestroyedServer(Man player, string part_name, int action_id, bool destroyed_by_connected_part = false)
 	{
 		super.OnPartDestroyedServer(player, part_name, action_id, destroyed_by_connected_part);
 
+		ref map<string, string> more = new map<string, string>();
+		more.Insert("dismantle_foreign_ok", LogZ_ExpansionStructures.DismantleForeignOk());
+
 		// parts that fall with the destroyed one are a consequence, not an action
 		if (destroyed_by_connected_part) {
-			LogZ_ExpansionStructures.WithPart(this, "base part destroyed", LogZ_Level.DEBUG, player, part_name, action_id);
+			LogZ_ExpansionStructures.WithPart(this, "base part destroyed", LogZ_Level.DEBUG, player, part_name, action_id, more);
 			return;
 		}
 
-		LogZ_ExpansionStructures.WithPart(this, "base part destroyed", LogZ_Level.INFO, player, part_name, action_id);
+		LogZ_ExpansionStructures.WithPart(this, "base part destroyed", LogZ_Level.INFO, player, part_name, action_id, more);
 	}
 }
 
@@ -137,17 +176,7 @@ modded class ItemBase
 		extra.Insert("place_pos", where.ToString());
 		extra.Insert("place_distance", vector.Distance(pb.GetPosition(), where).ToString());
 
-		auto settings = GetExpansionSettings().GetBaseBuilding(false);
-		if (settings && settings.IsLoaded()) {
-			bool whitelisted;
-			foreach (string deployable : settings.DeployableInsideAEnemyTerritory) {
-				if (IsKindOf(deployable)) {
-					whitelisted = true;
-					break;
-				}
-			}
-			extra.Insert("enemy_territory_ok", LogZ_ExpansionLogger.Flag(whitelisted));
-		}
+		extra.Insert("enemy_territory_ok", LogZ_ExpansionStructures.EnemyTerritoryOk(this));
 
 		LogZ_ExpansionLogger.WithBase("object placed", LogZ_Level.INFO, this, pb, extra);
 	}

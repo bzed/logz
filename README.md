@@ -235,7 +235,9 @@ The mod has built-in support for popular modifications:
   deleted: destroyed, dismantled), `territory invite sent`, `territory member
   kicked`, `promoted`, `demoted`, `left`, `object placed` (`place_distance`:
   Expansion checks the territory rules against the player, not the object),
-  `base part built`, `dismantled`, `destroyed`, `base part built with admin
+  `base part built` (`enemy_territory_ok`: the type may be built in an enemy
+  territory), `dismantled` and `destroyed` (`dismantle_foreign_ok`: settings let
+  non-members dismantle), `base part built with admin
   hammer`, `raid damage` (tool cycles at info, weapon and explosion hits at
   debug; `raidable_now`, `can_be_damaged`, health before and after),
   `territory flag dismantled` and `expansion explosive detonated`. Fields
