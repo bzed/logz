@@ -66,7 +66,9 @@ enum LogZ_Event {
 	INVENTORY_FAILURE = 134217728, // Server rejected an inventory move (no letter, numeric mask only)
 	CODE_LOCK = 268435456, // Code lock unlock/lock/code change of a mod lock, e.g. Expansion (no letter, numeric mask only)
 
-	MAX = 536870911, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE + CODE_LOCK)
+	BASE_BUILDING = 536870912, // Territory, placement, part build/dismantle/destroy and raid actions of a mod, e.g. Expansion (no letter, numeric mask only)
+
+	MAX = 1073741823, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE + CODE_LOCK + BASE_BUILDING)
 }
 
 /**

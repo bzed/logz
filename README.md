@@ -222,7 +222,24 @@ The mod has built-in support for popular modifications:
   same `@LogZ` folder: its `requiredAddons` make it compile after Expansion.
   Without Expansion the server prints a harmless
   `Addon 'LogZ_Expansion_BaseBuilding' requires addon ...` warning and the
-  hooks compile to nothing (`#ifdef EXPANSIONMODBASEBUILDING`).
+  hooks compile to nothing (`#ifdef EXPANSIONMODBASEBUILDING`). Every code lock
+  line also carries the territory of the lock (`territory_id`,
+  `territory_owner_uid`, `territory_member`).
+  Base-building actions are logged as `BASE_BUILDING` events (`base.building`,
+  numeric mask only), each with the territory of the object and whether the
+  acting player is a member of it (owner and members alike), and the tool in
+  the player's hands: `territory created` (`had_territory`, `old_owner_uid`:
+  Expansion never checks that the flag is the player's), `territory member
+  joined` (`has_invite`: Expansion never checks that an invite exists),
+  `territory deleted`, `territory deleted by admin`, `territory removed` (flag
+  deleted: destroyed, dismantled), `territory invite sent`, `territory member
+  kicked`, `promoted`, `demoted`, `left`, `object placed` (`place_distance`:
+  Expansion checks the territory rules against the player, not the object),
+  `base part built`, `dismantled`, `destroyed`, `base part built with admin
+  hammer`, `raid damage` (tool cycles at info, weapon and explosion hits at
+  debug; `raidable_now`, `can_be_damaged`, health before and after),
+  `territory flag dismantled` and `expansion explosive detonated`. Fields
+  ending in `_uid` are always strings.
 * **[MetricZ]**:
   Exports Prometheus metrics about the logger's operation:
   * `dayz_metricz_logz_processing_seconds_total` — time spent processing

@@ -95,7 +95,11 @@ class LogZ
 				if (key == string.Empty || value == string.Empty)
 					continue;
 
-				if (LogZ_Json.IsValue(value))
+				// ids in keys ending "_uid" (Steam ids: 17 digits, above 2^53) stay strings, a JSON
+				// parser reading them as numbers would round them
+				bool isUid = key.Length() > 4 && key.Substring(key.Length() - 4, 4) == "_uid";
+
+				if (!isUid && LogZ_Json.IsValue(value))
 					// ! only append long json body, because string.Format cant hold long lines
 					result += string.Format(",\"%1\":", LogZ_Json.Escape(key)) + value;
 				else
