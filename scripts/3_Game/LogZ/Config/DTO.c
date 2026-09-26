@@ -76,7 +76,7 @@ class LogZ_ConfigDTO_Settings
 	// Event mask configuration.
 	// Can be a specific bitmask integer or a string of characters representing event categories.
 	// Example: "ABKqz" or "-1" (for all).
-	// Letters cover only the first 26 events; `WEAPON_FIRE` and `INVENTORY_FAILURE`
+	// Letters cover only the first 26 events; `WEAPON_FIRE`, `INVENTORY_FAILURE` and `CODE_LOCK`
 	// have no letter and are enabled through the numeric form only.
 	// Existing config files keep their saved value: set "-1" there to enable the new events.
 	string events_mask = "-1";

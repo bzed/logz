@@ -76,10 +76,10 @@ Changes require a server restart to take effect.
 * **`settings.events_mask`** (`string`) = "-1" -
   Event mask configuration. Can be a specific bitmask integer or a string of
   characters representing event categories. Example: "ABKqz" or "-1" (for
-  all). Letters cover only the first 26 events; `WEAPON_FIRE` and
-  `INVENTORY_FAILURE` have no letter and are enabled through the numeric
-  form only. Existing config files keep their saved value: set "-1" there to
-  enable the new events.
+  all). Letters cover only the first 26 events; `WEAPON_FIRE`,
+  `INVENTORY_FAILURE` and `CODE_LOCK` have no letter and are enabled through
+  the numeric form only. Existing config files keep their saved value: set
+  "-1" there to enable the new events.
 * **`settings.disable_telemetry`** (`bool`) -
   Disable send minimal telemetry 10-20 minutes after server startup.
 
@@ -234,3 +234,4 @@ to build your configuration:
 | **Z** | `1<<25` | `33554432` | `EXPLOSIVE` | Explosive arming and detonation |
 | **-** | `1<<26` | `67108864` | `WEAPON_FIRE` | Weapon fired a shot (no letter, numeric mask only) |
 | **-** | `1<<27` | `134217728` | `INVENTORY_FAILURE` | Server rejected an inventory move (no letter, numeric mask only) |
+| **-** | `1<<28` | `268435456` | `CODE_LOCK` | Code lock unlock/lock/code change of a mod lock, e.g. Expansion (no letter, numeric mask only) |

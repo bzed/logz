@@ -16,9 +16,9 @@
         configured in MetaMod for Counter-Strike 1.6.
         If anyone wants to improve this, please send me a PR.
 
-        Letters A..Z cover bits 0..25 only. WEAPON_FIRE and INVENTORY_FAILURE
-        (bits 26 and 27) have no letter and are reachable only through the
-        numeric form of events_mask (for example "-1" for all events).
+        Letters A..Z cover bits 0..25 only. WEAPON_FIRE, INVENTORY_FAILURE and
+        CODE_LOCK (bits 26 to 28) have no letter and are reachable only through
+        the numeric form of events_mask (for example "-1" for all events).
 */
 enum LogZ_Event {
 	NONE = 0, // Nothing
@@ -64,8 +64,9 @@ enum LogZ_Event {
 
 	WEAPON_FIRE = 67108864, // Weapon fired a shot (no letter, numeric mask only)
 	INVENTORY_FAILURE = 134217728, // Server rejected an inventory move (no letter, numeric mask only)
+	CODE_LOCK = 268435456, // Code lock unlock/lock/code change of a mod lock, e.g. Expansion (no letter, numeric mask only)
 
-	MAX = 268435455, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE)
+	MAX = 536870911, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE + CODE_LOCK)
 }
 
 /**

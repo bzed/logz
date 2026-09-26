@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning][].
 
 ## Unreleased
 
+### Added
+
+* `CODE_LOCK` event (`code.lock`, numeric mask only) for DayZ Expansion
+  BaseBuilding code locks: wrong code, unlocked, code set, code changed (with
+  `was_locked`, `known_user`), locked; codes are never logged. Shipped as a
+  second addon `logz_expansion.pbo` that is inert without Expansion
+
 ### Changed
 
 * refactor string concatenation and loops increment to improve performance
