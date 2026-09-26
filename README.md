@@ -212,6 +212,17 @@ The mod has built-in support for popular modifications:
   Correctly identifies eAI bots. Damage events on them are logged as
   `CREATURE_HIT`/`KILL` instead of `PLAYER_HIT` to avoid spoiling live
   player statistics.
+* **[DayZ-Expansion-BaseBuilding]** (standalone or in the Expansion bundle):
+  Expansion code locks on gates, safes, tents and code lock items are logged
+  as `CODE_LOCK` events (`code.lock`): `code lock wrong code`,
+  `code lock unlocked`, `code lock code set`, `code lock code changed` (with
+  `was_locked` and `known_user`: Expansion's server does not check either
+  before changing a code) and `code lock locked` (debug). Entered codes are
+  never logged. The hooks ship as a second addon, `logz_expansion.pbo`, in the
+  same `@LogZ` folder: its `requiredAddons` make it compile after Expansion.
+  Without Expansion the server prints a harmless
+  `Addon 'LogZ_Expansion_BaseBuilding' requires addon ...` warning and the
+  hooks compile to nothing (`#ifdef EXPANSIONMODBASEBUILDING`).
 * **[MetricZ]**:
   Exports Prometheus metrics about the logger's operation:
   * `dayz_metricz_logz_processing_seconds_total` — time spent processing
@@ -241,3 +252,4 @@ page would be greatly appreciated!
 [LogZ]: https://steamcommunity.com/sharedfiles/filedetails/?id=3610709966
 [MetricZ]: https://steamcommunity.com/sharedfiles/filedetails/?id=3594119002
 [DayZ-Expansion-AI]: https://steamcommunity.com/sharedfiles/filedetails/?id=2792982069
+[DayZ-Expansion-BaseBuilding]: https://steamcommunity.com/sharedfiles/filedetails/?id=2792982513

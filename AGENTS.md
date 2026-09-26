@@ -30,8 +30,25 @@ scripts/3_Game/LogZ/    config, DTOs, logger core (Log, Level, Sink, Event)
 scripts/4_World/LogZ/   entity hooks (PlayerBase, Weapon_Base, CarScript, ...)
                         and WorldLogger
 scripts/5_Mission/LogZ/ MissionServer / ColletorLogZ
+expansion/              second addon logz_expansion.pbo: hooks for DayZ Expansion
 tools/                  validation, doc generation, formatting, build
 ```
+
+**Hooks into other mods (verified 2026-09-26 with Expansion 1.9.73):** logz must never depend on
+another mod. A `modded class` that overrides a method another mod added only compiles if that
+mod's scripts compile first, and addon order comes from `CfgPatches requiredAddons` - logz's own
+addon requires only vanilla, so it compiles before Expansion ("marked as override, but there is no
+function with this name"), even though Expansion's `#define`s (set in its preload addons) are
+already visible. A modded 4_World class cannot move to 5_Mission either ("Unknown type"). So such
+hooks live in `expansion/`, a second addon in the same `@LogZ` folder whose `requiredAddons` name
+the other mod's scripts addon, with every file wrapped in that part's own define
+(`#ifdef EXPANSIONMODBASEBUILDING`, `EXPANSIONMODAI`, ...). A missing required addon is only a
+warning in DayZ (`Addon '...' requires addon '...'`), the server boots and the guarded scripts compile
+to nothing. Test every change in four runs: vanilla, the Expansion bundle (workshop 2572331007 with
+CF 1559212036, Dabs 2545327648, Licensed 2116157322, Animations 2793893086), Expansion Core alone
+(2291785308) and Core plus standalone BaseBuilding (2792982513), all symlinked into the test tree.
+Expansion's lock RPC handlers need a PlayerIdentity; headless tests call them with `null` and get a
+VM exception inside Expansion's code (it continues), so the `player` field is only proven with a client.
 
 Vanilla classes being modded live in `../dayz-sources/scripts/` — read them
 there before changing a hook; never edit or copy from that tree into a commit.

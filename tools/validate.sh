@@ -28,4 +28,4 @@ while read -r file; do
     echo "FAIL: use g_Game instead of GetGame(): $file"
     exit 1
   fi
-done < <(find ./scripts -type f -name "*.c")
+done < <(find ./scripts ./expansion/scripts -type f -name "*.c")

@@ -20,6 +20,9 @@ mod='P:\@logz\addons'
 include="$src"'\tools\pbo_include.txt'
 
 "$pbo" "$src" "$mod" -clear -include="$include" -prefix="logz"
+# Hooks for DayZ Expansion: a second addon ordered after Expansion by its requiredAddons, inert
+# without Expansion (see expansion/config.cpp).
+"$pbo" "$src"'\expansion' "$mod" -include="$include" -prefix="logz_expansion"
 cp README.md CONFIG.md METRICS.md /p/\@logz/
 
 url 'https://steamcommunity.com/sharedfiles/filedetails/?id=3610709966' workshop
