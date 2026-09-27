@@ -231,6 +231,12 @@ class LogZ_ConfigDTO_Throttling
 	// 0 - log every projectile.
 	int projectile_ms = 200;
 
+	// Minimum interval in milliseconds between hit claim lines (`firearm claim` / `melee claim`,
+	// `SYSTEM_GAME`) per shooter. 0 - log every claim (default).
+	// Claims that would make the server spawn a gas zone or explosion from a source that is not a
+	// launcher in the shooter's hands are always logged.
+	int hit_claim_ms = 0;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
@@ -243,6 +249,7 @@ class LogZ_ConfigDTO_Throttling
 		transport_snapshot_s = Math.Clamp(transport_snapshot_s, 0, 3600);
 		quantity_change_ms = Math.Clamp(quantity_change_ms, 0, 60000);
 		projectile_ms = Math.Clamp(projectile_ms, 0, 60000);
+		hit_claim_ms = Math.Clamp(hit_claim_ms, 0, 60000);
 	}
 }
 

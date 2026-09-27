@@ -12,6 +12,9 @@
 class LogZ_GameLogger
 {
 	protected static ref map<int, int> s_ProjectileLastMs;
+	protected static ref map<int, int> s_ClaimLastMs;
+	protected static ref map<string, string> s_ZoneClaim;
+	protected static int s_ZoneClaimMs;
 
 	/**
 	    \brief Log message with single object payload.
@@ -156,6 +159,190 @@ class LogZ_GameLogger
 			dto.Insert("water", "1");
 
 		LogZ.Log(msg, LogZ_Level.INFO, LogZ_Event.SYSTEM_GAME, dto);
+	}
+
+	/**
+	    \brief Vector as a JSON array, the form Log() writes without quotes.
+	*/
+	protected static string Vec(vector v)
+	{
+		return string.Format("[%1,%2,%3]", v[0], v[1], v[2]);
+	}
+
+	/**
+	    \brief Log a hit claim the server is processing (WP-14, plan 2.15).
+	    \details
+	        Called first thing from the modded DayZGame.FirearmEffects / CloseCombatEffects, which the
+	        engine calls with the claim's own data on the server and on every client. Vanilla's
+	        server branch acts on that data (an explosive-ammo claim spawns a gas zone or an
+	        explosion at the claimed position when source.ShootsExplosiveAmmo() holds), and the claim
+	        also covers hits on foliage, ground and loot that EEHitBy never sees.
+
+	        Roles as on hit lines: source = "attacker" (left out when it is the shooter itself),
+	        its hierarchy root player = "attacker_parent", the object hit = "victim". The strings
+	        surface and ammo_type are attacker-supplied and go through LogZ_Json.Token.
+
+	        Shooters without an identity (eAI) are skipped when filters.skip_ai_weapon_fire is set.
+	        Lines are limited to one per shooter per throttling.hit_claim_ms, except the red flag: an
+	        explosive-ammo claim whose source is not a launcher in the shooter's hands is WARN and
+	        never throttled. A claim that makes the server spawn a zone or explosion also records who
+	        did it (BeginClaim state) so the zone line can name the cause, whatever the log settings.
+	    \param msg        "firearm claim" or "melee claim".
+	    \param firearm    True for FirearmEffects (has exit position, speeds, deflection).
+	*/
+	static void WithClaim(string msg, Object source, Object directHit, int component, string surface, vector pos, vector surfNormal, vector exitPos, vector inSpeed, vector outSpeed, bool water, bool deflected, string ammoType, bool firearm)
+	{
+		s_ZoneClaim = null;
+
+		if (!g_Game.IsDedicatedServer() || !LogZ_Config.IsLoaded())
+			return;
+
+		EntityAI src = EntityAI.Cast(source);
+		Man shooter;
+		if (src)
+			shooter = src.GetHierarchyRootPlayer();
+
+		if (shooter && !shooter.GetIdentity() && LogZ_Config.Get().filters.skip_ai_weapon_fire)
+			return;
+
+		// what the vanilla server branch will do with this claim
+		bool explosiveAmmo = firearm && (ammoType == "Bullet_40mm_ChemGas" || ammoType == "Bullet_40mm_Explosive");
+		bool sourceExplosive = source && source.ShootsExplosiveAmmo();
+		bool sourceWeapon = source && source.IsWeapon();
+		bool sourceInHands = shooter && src && shooter.GetEntityInHands() == src;
+		bool spawns = explosiveAmmo && sourceExplosive && !deflected && outSpeed == vector.Zero;
+		bool launcherInHands = sourceWeapon && sourceExplosive && sourceInHands;
+		bool redFlag = explosiveAmmo && !launcherInHands;
+
+		string srcJson, shooterJson;
+		bool serialized;
+
+		// serializing costs, so only when the state is kept or the line is written
+		string ammo;
+		if (spawns) {
+			SerializeClaimActors(src, shooter, srcJson, shooterJson);
+			serialized = true;
+			ammo = LogZ_Json.Token(ammoType);
+
+			s_ZoneClaim = new map<string, string>();
+			s_ZoneClaim.Insert("attacker", srcJson);
+			s_ZoneClaim.Insert("attacker_parent", shooterJson);
+			s_ZoneClaim.Insert("claim_ammo_type", ammo);
+			s_ZoneClaim.Insert("claim_launcher", FlagValue(launcherInHands));
+			s_ZoneClaimMs = g_Game.GetTime();
+		}
+
+		LogZ_Level lvl = LogZ_Level.INFO;
+		if (redFlag)
+			lvl = LogZ_Level.WARN;
+
+		if (!LogZ_Levels.IsEnabled(lvl) || !LogZ_Events.IsEnabled(LogZ_Event.SYSTEM_GAME))
+			return;
+
+		int intervalMs = LogZ_Config.Get().throttling.hit_claim_ms;
+		if (intervalMs > 0 && !redFlag && !spawns) {
+			if (!s_ClaimLastMs)
+				s_ClaimLastMs = new map<int, int>();
+
+			int shooterKey = 0;
+			if (shooter)
+				shooterKey = shooter.GetID();
+
+			int now = g_Game.GetTime();
+			int last;
+			if (s_ClaimLastMs.Find(shooterKey, last) && (now - last) < intervalMs)
+				return;
+
+			s_ClaimLastMs.Set(shooterKey, now);
+		}
+
+		if (!serialized) {
+			SerializeClaimActors(src, shooter, srcJson, shooterJson);
+			ammo = LogZ_Json.Token(ammoType);
+		}
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (srcJson != string.Empty)
+			dto.Insert("attacker", srcJson);
+
+		if (shooterJson != string.Empty)
+			dto.Insert("attacker_parent", shooterJson);
+
+		if (directHit && SerializeObject(directHit, json))
+			dto.Insert("victim", json);
+
+		dto.Insert("component", component.ToString());
+		dto.Insert("surface", LogZ_Json.Token(surface));
+		dto.Insert("ammo_type", ammo);
+		dto.Insert("pos", Vec(pos));
+		dto.Insert("surface_normal", Vec(surfNormal));
+
+		if (water)
+			dto.Insert("water", "1");
+
+		if (firearm) {
+			dto.Insert("exit_pos", Vec(exitPos));
+			dto.Insert("in_speed", Vec(inSpeed));
+			dto.Insert("out_speed", Vec(outSpeed));
+			dto.Insert("deflected", FlagValue(deflected));
+			dto.Insert("explosive_ammo", FlagValue(explosiveAmmo));
+			dto.Insert("spawns", FlagValue(spawns));
+			dto.Insert("source_explosive", FlagValue(sourceExplosive));
+			dto.Insert("source_weapon", FlagValue(sourceWeapon));
+			dto.Insert("source_in_hands", FlagValue(sourceInHands));
+		}
+
+		if (!src)
+			dto.Insert("no_source", "1");
+		else if (!shooter)
+			dto.Insert("no_shooter", "1");
+
+		LogZ.Log(msg, lvl, LogZ_Event.SYSTEM_GAME, dto);
+	}
+
+	/**
+	    \brief Serialize the source (unless it is the shooter itself) and the shooter of a claim.
+	*/
+	protected static void SerializeClaimActors(EntityAI src, Man shooter, out string srcJson, out string shooterJson)
+	{
+		if (src && shooter != src)
+			SerializeObject(src, srcJson);
+
+		if (shooter)
+			SerializeObject(shooter, shooterJson);
+	}
+
+	/**
+	    \brief End of the claim WithClaim recorded, called after the vanilla body ran.
+	*/
+	static void EndClaim()
+	{
+		s_ZoneClaim = null;
+	}
+
+	/**
+	    \brief The claim that is being processed right now, when it makes the server spawn a zone.
+	    \details
+	        ContaminatedArea_Local.EEInit runs inside g_Game.CreateObject, i.e. inside the vanilla
+	        FirearmEffects that WithClaim precedes. Empty outside of that (a chemical grenade, a
+	        destroyed 40mm pile), or when the state is stale.
+	*/
+	static map<string, string> GetZoneClaim()
+	{
+		if (s_ZoneClaim && (g_Game.GetTime() - s_ZoneClaimMs) < 250)
+			return s_ZoneClaim;
+
+		return null;
+	}
+
+	protected static string FlagValue(bool value)
+	{
+		if (value)
+			return "1";
+
+		return "0";
 	}
 
 	/**

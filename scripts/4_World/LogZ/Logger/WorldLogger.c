@@ -155,6 +155,48 @@ class LogZ_WorldLogger
 	}
 
 	/**
+	    \brief Log a gas zone the server created (WP-14).
+	    \details
+	        via_claim is 1 when the zone was created inside a hit claim, in which case the claim's
+	        source and shooter are copied to the line (attacker, attacker_parent) with claim_ammo_type
+	        and claim_launcher (1: the claim's source was a launcher in the shooter's hands). Such a
+	        zone from a source that is no launcher is WARN. The radius is not written: it is set in a
+	        deferred step after EEInit (10 m in vanilla).
+	    \param zone New zone.
+	*/
+	static void WithContaminatedArea(ContaminatedArea_Local zone)
+	{
+		if (!zone || !LogZ_Events.IsEnabled(LogZ_Event.SYSTEM_WORLD))
+			return;
+
+		LogZ_Level lvl = LogZ_Level.INFO;
+		ref map<string, string> claim = LogZ_GameLogger.GetZoneClaim();
+		if (claim && claim.Get("claim_launcher") != "1")
+			lvl = LogZ_Level.WARN;
+
+		if (!LogZ_Levels.IsEnabled(lvl))
+			return;
+
+		ref map<string, string> dto = new map<string, string>();
+		string json;
+
+		if (LogZ_GameLogger.SerializeObject(zone, json))
+			dto.Insert("object", json);
+
+		dto.Insert("lifetime", zone.GetRemainingTime().ToString());
+
+		if (claim) {
+			dto.Insert("via_claim", "1");
+			foreach (string key, string value : claim)
+				dto.Insert(key, value);
+		} else {
+			dto.Insert("via_claim", "0");
+		}
+
+		LogZ.Log("contaminated area", lvl, LogZ_Event.SYSTEM_WORLD, dto);
+	}
+
+	/**
 	    \brief Log one weapon shot with weapon, shooter and jam/stamina context.
 	    \details
 	        Same roles as hit events: the weapon is "attacker", the shooter "attacker_parent"
