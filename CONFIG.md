@@ -149,6 +149,12 @@ Changes require a server restart to take effect.
 * **`throttling.projectile_ms`** (`int`) = 200 -
   Minimum interval in milliseconds between projectile stop events per
   shooter. 0 - log every projectile.
+* **`throttling.hit_claim_ms`** (`int`) = 0 -
+  Minimum interval in milliseconds between hit claim lines (`firearm claim`
+  / `melee claim`, `SYSTEM_GAME`) per shooter. 0 - log every claim
+  (default). Claims that would make the server spawn a gas zone or explosion
+  from a source that is not a launcher in the shooter's hands are always
+  logged.
 
 ### Thresholds
 

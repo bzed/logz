@@ -30,6 +30,17 @@ and this project adheres to [Semantic Versioning][].
   the lock's territory as well
 * extra fields whose key ends in `_uid` are always written as strings (Steam
   ids exceed 2^53 and were emitted as JSON numbers)
+* hit claim lines (`firearm claim` / `melee claim`, `system.game`): every hit
+  claim the server processes (`DayZGame.FirearmEffects` /
+  `CloseCombatEffects`) with its full payload, including hits on foliage,
+  ground and loot that never reach `EEHitBy`. A 40mm gas or explosive claim
+  whose source is not a launcher in the shooter's hands is WARN and never
+  throttled. New `throttling.hit_claim_ms` (0 = every claim)
+* `contaminated area` line (`system.world`) when the server creates a gas zone,
+  with the claim (`via_claim`, `claim_launcher`, shooter) that caused it
+* `LogZ_Json.Token`: attacker-supplied strings (surface, ammo type) are reduced
+  to `[A-Za-z0-9_.-]`, cut at 64 characters and kept quoted, so a forged claim
+  cannot break a line or inject JSON
 
 ### Changed
 

@@ -45,6 +45,46 @@ class LogZ_Json
 	}
 
 	/**
+	    \brief Reduce an attacker-supplied string to a plain identifier.
+	    \details
+	        Hit claims carry strings the client chose (surface, ammo type). Escape() lets control
+	        characters other than \n \r \t through when the string has no other special, and Log()
+	        writes a value that looks like a JSON object, array or number without quotes, so a forged
+	        string could produce an invalid line or forge structure. Token() keeps only
+	        [A-Za-z0-9_.-], replaces everything else with '?', cuts at maxLen, and prefixes '_' when
+	        the result would still read as a number (so it stays a quoted string).
+	    \param input  Untrusted string.
+	    \param maxLen Maximum length of the result.
+	    \return string Safe identifier, empty for empty input.
+	*/
+	static string Token(string input, int maxLen = 64)
+	{
+		if (!input || input == string.Empty)
+			return "";
+
+		string result = "";
+		int n = input.Length();
+		if (n > maxLen)
+			n = maxLen;
+
+		for (int i = 0; i < n; ++i) {
+			int c = input.Get(i).ToAscii();
+
+			// 0-9, A-Z, a-z, '_', '.', '-'
+			if ((c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95 || c == 46 || c == 45)
+				result += input.Get(i);
+			else
+				result += "?";
+		}
+
+		string probe = result;
+		if (IsValue(probe))
+			result = "_" + result;
+
+		return result;
+	}
+
+	/**
 	    \brief Heuristic check if string is a JSON value.
 	    \warning Stock JsonSerializer has no polymorphism or field injection.
 	        We must guess "does this look like JSON" to inject raw values without double escaping.
