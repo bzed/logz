@@ -4,10 +4,12 @@
     Source: https://github.com/woozymasta/logz
 */
 
-// LogZ hooks for DayZ Expansion BaseBuilding (code locks), a separate addon so that its scripts
-// compile after Expansion's: a modded class can only override methods that an earlier addon
-// defined, and CfgPatches requiredAddons is what orders addons. LogZ itself never depends on
-// Expansion; the scripts are also wrapped in #ifdef EXPANSIONMODBASEBUILDING.
+// LogZ hooks for DayZ Expansion (BaseBuilding code locks, Core teleport telemetry), a separate
+// addon so that its scripts compile after Expansion's: a modded class can only override methods
+// that an earlier addon defined, and CfgPatches requiredAddons is what orders addons. LogZ itself
+// never depends on Expansion; each part's scripts are also wrapped in their own
+// #ifdef (EXPANSIONMODBASEBUILDING, EXPANSIONMODCORE), so a server missing one Expansion module
+// still boots the other part cleanly (a missing requiredAddon is only a warning in DayZ).
 
 class CfgMods
 {
@@ -39,6 +41,13 @@ class CfgPatches
 		requiredAddons[] = {
 			"LogZ",
 			"DayZExpansion_BaseBuilding_Scripts",
+		};
+	};
+	class LogZ_Expansion_Core
+	{
+		requiredAddons[] = {
+			"LogZ",
+			"DayZExpansion_Core_Scripts",
 		};
 	};
 };

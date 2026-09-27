@@ -68,7 +68,9 @@ enum LogZ_Event {
 
 	BASE_BUILDING = 536870912, // Territory, placement, part build/dismantle/destroy and raid actions of a mod, e.g. Expansion (no letter, numeric mask only)
 
-	MAX = 1073741823, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE + CODE_LOCK + BASE_BUILDING)
+	EXPANSION_TELEPORT = 1073741824, // A player's position was set by Expansion_Teleport, e.g. Expansion spawn selection or a teleporter (no letter, numeric mask only)
+
+	MAX = 2147483647, // All combined (ABCDEFGHIJKLMNOPQRSTUVWXYZ + WEAPON_FIRE + INVENTORY_FAILURE + CODE_LOCK + BASE_BUILDING + EXPANSION_TELEPORT)
 }
 
 /**
