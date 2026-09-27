@@ -77,9 +77,9 @@ Changes require a server restart to take effect.
   Event mask configuration. Can be a specific bitmask integer or a string of
   characters representing event categories. Example: "ABKqz" or "-1" (for
   all). Letters cover only the first 26 events; `WEAPON_FIRE`,
-  `INVENTORY_FAILURE`, `CODE_LOCK` and `BASE_BUILDING` have no letter and are
-  enabled through the numeric form only. Existing config files keep their saved value: set
-  "-1" there to enable the new events.
+  `INVENTORY_FAILURE`, `CODE_LOCK` and `BASE_BUILDING` have no letter and
+  are enabled through the numeric form only. Existing config files keep
+  their saved value: set "-1" there to enable the new events.
 * **`settings.disable_telemetry`** (`bool`) -
   Disable send minimal telemetry 10-20 minutes after server startup.
 
@@ -115,11 +115,11 @@ Changes require a server restart to take effect.
 * **`filters.skip_ai_snapshots`** (`bool`) = true -
   Skip AI (eAI) players in periodic snapshot events. AI has no `steam_id`;
   the analyzer ignores it anyway, so this only saves log volume.
-* **`filters.projectile_events`** (`bool`) = false -
-  Log where and how fast projectiles stop (`DayZGame.OnProjectileStopped*`) for
-  real-player shooters. Off by default: the volume is unmeasured and it is not
-  proven that the engine calls the callbacks for bullets on a dedicated server.
-  Rate limited by `throttling.projectile_ms`.
+* **`filters.projectile_events`** (`bool`) -
+  Log where and how fast projectiles stop (DayZGame OnProjectileStopped*),
+  for real-player shooters. Off by default: the volume is unmeasured and it
+  is not proven that the engine calls the callbacks for bullets on a
+  dedicated server. Rate limited by `throttling.projectile_ms`.
 * **`filters.skip_ai_weapon_fire`** (`bool`) = true -
   Skip AI (eAI) shooters in `WEAPON_FIRE` events. Fire events are
   unthrottled by default and eAI fires a lot; the analyzer ignores AI
@@ -155,6 +155,17 @@ Changes require a server restart to take effect.
   (default). Claims that would make the server spawn a gas zone or explosion
   from a source that is not a launcher in the shooter's hands are always
   logged.
+* **`throttling.juncture_timeout_ms`** (`int`) = 5000 -
+  Minimum interval in milliseconds between `action juncture timeout` lines
+  per player. A stuck action re-triggers OnJunctureTimedOut roughly once a
+  second, so this bounds the volume.
+* **`throttling.sync_juncture_ms`** (`int`) = 0 -
+  Minimum interval in milliseconds between `sync juncture` lines per
+  (player, juncture type). 0 - log every occurrence (default); these are
+  DEBUG unless upgraded to WARN (delete-item bursts).
+* **`throttling.rpc_audit_ms`** (`int`) = 1000 -
+  Minimum interval in milliseconds between `rpc sender mismatch` lines per
+  player.
 
 ### Thresholds
 
@@ -164,6 +175,11 @@ Changes require a server restart to take effect.
 * **`thresholds.hit_damage_vehicle`** (`float`) = 15.0 -
   Minimum damage from vehicles required to log hit events. Values of -1 or
   less disable this threshold.
+* **`thresholds.delete_item_burst`** (`int`) = 3 -
+  `SJ_DELETE_ITEM` sync junctures from one player within
+  `throttling.sync_juncture_ms`'s window (or 1000 ms if that throttle is
+  off) at or above this count escalate the line to WARN: the
+  delete-spam-while-an-action-or-throw-is-running pattern (plan 2.13).
 
 ### Geo
 
