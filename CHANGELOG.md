@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning][].
 * `LogZ_Json.Token`: attacker-supplied strings (surface, ammo type) are reduced
   to `[A-Za-z0-9_.-]`, cut at 64 characters and kept quoted, so a forged claim
   cannot break a line or inject JSON
+* `action juncture timeout` line (`admin.activity`) when an action's reserved
+  inventory locations are not confirmed in time (`ActionData.OnJunctureTimedOut`);
+  new `throttling.juncture_timeout_ms` (default 5000)
+* `sync juncture` line (`player.activity`) for the six client-initiated
+  `DayZPlayerSyncJunctures` (delete item, quickbar shortcut, gesture, kuru,
+  injury, player states); a burst of `SJ_DELETE_ITEM` (new
+  `thresholds.delete_item_burst`, default 3) escalates to WARN and bypasses
+  the throttle. New `throttling.sync_juncture_ms` (default 0 = every occurrence)
+* `rpc sender mismatch` line (`admin.activity`, WARN) when an RPC's sender does
+  not own the target player entity — probe traffic from a mod's `OnRPC`
+  handler acting on wire parameters without validating the sender, or a
+  hostile client; carries a per-player running mismatch count. New
+  `throttling.rpc_audit_ms` (default 1000)
 
 ### Changed
 

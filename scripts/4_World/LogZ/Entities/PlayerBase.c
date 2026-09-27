@@ -350,5 +350,28 @@ modded class PlayerBase
 		    this, string.Format("player jump out from vehicle on speed %1", carSpeed),
 		    LogZ_Level.INFO, LogZ_Event.PLAYER_ACTIVITY);
 	}
+
+	// Client-initiated sync junctures (WP-13, plan 2.13). super runs first: the rule from plan 2.4
+	// applies here too, the override must not read from pCtx itself before the vanilla body has
+	// consumed the stream for this juncture type, or later junctures desync.
+	override void OnSyncJuncture(int pJunctureID, ParamsReadContext pCtx)
+	{
+		super.OnSyncJuncture(pJunctureID, pCtx);
+
+		LogZ_JunctureLogger.WithSyncJuncture(this, pJunctureID);
+	}
+
+	// RPC sender/target mismatch audit (WP-13, plan 2.14): only the owning client may target this
+	// player entity with an RPC, so a mismatched sender is probe traffic (a mod's OnRPC handler
+	// acting on wire parameters without validating sender, or a hostile client). An eAI (no
+	// identity) is never a target of a real RPC and is skipped.
+	override void OnRPC(PlayerIdentity sender, int rpc_type, ParamsReadContext ctx)
+	{
+		super.OnRPC(sender, rpc_type, ctx);
+
+		PlayerIdentity ownIdentity = GetIdentity();
+		if (sender && ownIdentity && sender.GetPlainId() != ownIdentity.GetPlainId())
+			LogZ_JunctureLogger.WithRpcMismatch(this, sender, rpc_type);
+	}
 }
 #endif

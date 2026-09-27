@@ -1,6 +1,7 @@
 /*
     SPDX-License-Identifier: GPL-3.0-or-later
     Copyright (c) 2025 WoozyMasta
+    Copyright (c) 2026 Bernd Zeimetz <bernd@bzed.de>
     Source: https://github.com/woozymasta/logz
 */
 
@@ -11,6 +12,16 @@ modded class ActionData
 	bool LogZ_IsAllowed()
 	{
 		return true;
+	}
+
+	// Engine-invoked when this action's reserved inventory locations are not confirmed in time
+	// (WP-13, plan 2.13). The log call comes first so a failure below cannot lose the line; the
+	// vanilla body (extend the juncture another second) is unchanged.
+	override float OnJunctureTimedOut()
+	{
+		LogZ_JunctureLogger.WithJunctureTimeout(this);
+
+		return super.OnJunctureTimedOut();
 	}
 }
 

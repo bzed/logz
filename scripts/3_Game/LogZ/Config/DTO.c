@@ -237,6 +237,17 @@ class LogZ_ConfigDTO_Throttling
 	// launcher in the shooter's hands are always logged.
 	int hit_claim_ms = 0;
 
+	// Minimum interval in milliseconds between `action juncture timeout` lines per player.
+	// A stuck action re-triggers OnJunctureTimedOut roughly once a second, so this bounds the volume.
+	int juncture_timeout_ms = 5000;
+
+	// Minimum interval in milliseconds between `sync juncture` lines per (player, juncture type).
+	// 0 - log every occurrence (default); these are DEBUG unless upgraded to WARN (delete-item bursts).
+	int sync_juncture_ms = 0;
+
+	// Minimum interval in milliseconds between `rpc sender mismatch` lines per player.
+	int rpc_audit_ms = 1000;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
@@ -250,6 +261,9 @@ class LogZ_ConfigDTO_Throttling
 		quantity_change_ms = Math.Clamp(quantity_change_ms, 0, 60000);
 		projectile_ms = Math.Clamp(projectile_ms, 0, 60000);
 		hit_claim_ms = Math.Clamp(hit_claim_ms, 0, 60000);
+		juncture_timeout_ms = Math.Clamp(juncture_timeout_ms, 0, 60000);
+		sync_juncture_ms = Math.Clamp(sync_juncture_ms, 0, 60000);
+		rpc_audit_ms = Math.Clamp(rpc_audit_ms, 0, 60000);
 	}
 }
 
@@ -263,6 +277,11 @@ class LogZ_ConfigDTO_Thresholds
 	// Values of -1 or less disable this threshold.
 	float hit_damage_vehicle = 15.0;
 
+	// `SJ_DELETE_ITEM` sync junctures from one player within `throttling.sync_juncture_ms`'s window
+	// (or 1000 ms if that throttle is off) at or above this count escalate the line to WARN: the
+	// delete-spam-while-an-action-or-throw-is-running pattern (plan 2.13).
+	int delete_item_burst = 3;
+
 	/**
 	    \brief Normalizes configuration values within valid ranges.
 	*/
@@ -270,6 +289,7 @@ class LogZ_ConfigDTO_Thresholds
 	{
 		hit_damage = Math.Clamp(hit_damage, -1, 1000);
 		hit_damage_vehicle = Math.Clamp(hit_damage_vehicle, -1, 1000);
+		delete_item_burst = Math.Clamp(delete_item_burst, 1, 1000);
 	}
 }
 
