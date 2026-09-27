@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+* `EXPANSION_TELEPORT` event (`expansion.teleport`, numeric mask only) for DayZ
+  Expansion Core: every relocation of a player's own character through
+  `Expansion_Teleport` (the spawn-selection menu and the standalone Teleporter
+  module both call it), with `from_pos` and the destination on the object's own
+  `pos`. `Expansion_Teleport` itself only sets the position with no logging of
+  its own, so this is the only way to tell a legitimate Expansion-driven jump
+  apart from a real position exploit (WP-15). Compiled only when Expansion
+  Core is loaded (`EXPANSIONMODCORE`), in the same `logz_expansion.pbo`
 * `CODE_LOCK` event (`code.lock`, numeric mask only) for DayZ Expansion
   BaseBuilding code locks: wrong code, unlocked, code set, code changed (with
   `was_locked`, `known_user`), locked; codes are never logged. Shipped as a

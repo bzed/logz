@@ -258,3 +258,4 @@ to build your configuration:
 | **-** | `1<<27` | `134217728` | `INVENTORY_FAILURE` | Server rejected an inventory move (no letter, numeric mask only) |
 | **-** | `1<<28` | `268435456` | `CODE_LOCK` | Code lock unlock/lock/code change of a mod lock, e.g. Expansion (no letter, numeric mask only) |
 | **-** | `1<<29` | `536870912` | `BASE_BUILDING` | Territory, placement, part build/dismantle/destroy and raid actions of a mod, e.g. Expansion (no letter, numeric mask only) |
+| **-** | `1<<30` | `1073741824` | `EXPANSION_TELEPORT` | A player's position was set by Expansion_Teleport, e.g. Expansion spawn selection or a teleporter (no letter, numeric mask only) |
