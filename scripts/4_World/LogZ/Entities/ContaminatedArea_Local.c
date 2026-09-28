@@ -10,7 +10,8 @@
     \details
         Vanilla creates ContaminatedArea_Local from a 40mm gas claim (DayZGame.FirearmEffects), a
         chemical grenade and a destroyed 40mm pile. The line says where the server really put it
-        and, when it came from a claim, whose claim (via_claim, see LogZ_GameLogger.WithClaim).
+        and which vanilla creator made it (origin: claim, grenade, ammo_pile or unknown; see
+        LogZ_WorldLogger.BeginZoneOrigin and, for a claim, LogZ_GameLogger.WithClaim).
 */
 modded class ContaminatedArea_Local
 {
