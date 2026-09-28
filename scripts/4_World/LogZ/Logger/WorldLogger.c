@@ -11,6 +11,14 @@
 */
 class LogZ_WorldLogger
 {
+	// Which geometry the line-of-sight ray (FillLineOfSight) intersects. Fire geometry is what a bullet
+	// meets; view geometry also stops at thin foliage (local server 2026-09-28: same rays, bushes vs
+	// the building behind them).
+	protected static const int LOS_GEOMETRY = ObjIntersectFire;
+
+	// Most times the line-of-sight ray restarts behind the attacker's own gear or another creature.
+	protected static const int LOS_MAX_STEPS = 6;
+
 	/**
 	    \brief Log full player snapshot with optional message.
 	    \param player    PlayerBase subject.
@@ -91,6 +99,8 @@ class LogZ_WorldLogger
 	    \details
 	        The caller skips victims whose kill is already logged (LogZ_IsAlreadyKilled), not
 	        destroyed ones: the lethal hit arrives with the victim already destroyed.
+	        A hit whose line must wait for vanilla's own EEHitBy body (bleeding_added) uses
+	        PrepareHit and EmitHit instead.
 	    \param victim       Damaged object.
 	    \param source       Damage source (EntityAI) or null.
 	    \param damageResult TotalDamageResult or null.
@@ -104,54 +114,211 @@ class LogZ_WorldLogger
 	*/
 	static void WithHit(Object victim, EntityAI source, TotalDamageResult damageResult, int damageType, int component, string dmgZone, string ammo, vector modelPos, float speedCoef, LogZ_Level lvl = 2)
 	{
+		LogZ_PendingHit pending = PrepareHit(victim, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, lvl);
+		if (pending)
+			EmitHit(pending);
+	}
+
+	/**
+	    \brief Build a hit line without writing it (WP-17), null when the hit is filtered out.
+	    \details
+	        Everything a hit line says about the moment of the hit (victim and attacker state,
+	        distance, line of sight) is captured here, before vanilla's EEHitBy body runs. EmitHit
+	        writes it, optionally after that body ran, so the line can say how many bleeding sources
+	        the hit opened. A line is emitted from inside the same EEHitBy call, so it still comes
+	        before the kill line.
+	*/
+	static LogZ_PendingHit PrepareHit(Object victim, EntityAI source, TotalDamageResult damageResult, int damageType, int component, string dmgZone, string ammo, vector modelPos, float speedCoef, LogZ_Level lvl = 2)
+	{
 		if (!LogZ_Config.IsLoaded() || !victim || !LogZ_Levels.IsEnabled(lvl))
-			return;
+			return null;
 
 		LogZ_Event eventType = ResolveVictimEvent(victim, true);
 		if (!LogZ_Events.IsEnabled(eventType))
-			return;
+			return null;
 
 		if (damageResult) {
 			float damage = damageResult.GetDamage(dmgZone, "");
 			if (damage < LogZ_Config.Get().thresholds.hit_damage)
-				return;
+				return null;
 
 			if (source && source.IsTransport() && damage < LogZ_Config.Get().thresholds.hit_damage_vehicle)
-				return;
+				return null;
 		}
 
-		ref map<string, string> dto = new map<string, string>();
+		LogZ_PendingHit pending = new LogZ_PendingHit();
+		pending.level = lvl;
+		pending.event_type = eventType;
 		string json;
 
 		if (LogZ_GameLogger.SerializeObject(victim, json))
-			dto.Insert("victim", json);
+			pending.fields.Insert("victim", json);
 
 		if (LogZ_GameLogger.SerializeParentObject(victim, json))
-			dto.Insert("victim_parent", json);
+			pending.fields.Insert("victim_parent", json);
 
-		LogZ_DTO_Damage damageDTO = new LogZ_DTO_Damage(damageResult, damageType, dmgZone, ammo, component, modelPos, speedCoef);
-		if (LogZ.GetSerializer().WriteToString(damageDTO, false, json))
-			dto.Insert("damage", json);
+		pending.damage = new LogZ_DTO_Damage(damageResult, damageType, dmgZone, ammo, component, modelPos, speedCoef);
 
 		if (!source) {
-			LogZ.Log(string.Format("%1 damaged", LogZ_Object.GetType(victim)), lvl, eventType, dto);
-			return;
+			pending.message = string.Format("%1 damaged", LogZ_Object.GetType(victim));
+			return pending;
 		}
 
 		if (source == victim) {
-			LogZ.Log(string.Format("%1 hit self", LogZ_Object.GetType(victim)), lvl, eventType, dto);
-			return;
+			pending.message = string.Format("%1 hit self", LogZ_Object.GetType(victim));
+			return pending;
 		}
 
-		dto.Insert("distance", LogZ_Utils.Distance(source, victim));
+		FillLineOfSight(pending.damage, victim, source, damageType, component, modelPos);
+
+		pending.fields.Insert("distance", LogZ_Utils.Distance(source, victim));
 
 		if (LogZ_GameLogger.SerializeObject(source, json))
-			dto.Insert("attacker", json);
+			pending.fields.Insert("attacker", json);
 
 		if (LogZ_GameLogger.SerializeParentObject(source, json))
-			dto.Insert("attacker_parent", json);
+			pending.fields.Insert("attacker_parent", json);
 
-		LogZ.Log(string.Format("%1 hit", LogZ_Object.GetType(victim)), lvl, eventType, dto);
+		pending.message = string.Format("%1 hit", LogZ_Object.GetType(victim));
+		return pending;
+	}
+
+	/**
+	    \brief Write a line PrepareHit built.
+	    \param bleedingAdded Bleeding sources the hit opened, -1 when not measured.
+	*/
+	static void EmitHit(LogZ_PendingHit pending, int bleedingAdded = -1)
+	{
+		string json;
+		pending.damage.bleeding_added = bleedingAdded;
+		if (LogZ.GetSerializer().WriteToString(pending.damage, false, json))
+			pending.fields.Insert("damage", json);
+
+		LogZ.Log(pending.message, pending.level, pending.event_type, pending.fields);
+	}
+
+	/**
+	    \brief True for a player, zombie or animal: something a hit claims to land on, and no cover.
+	*/
+	protected static bool IsBody(Object obj)
+	{
+		if (obj.IsMan())
+			return true;
+
+		EntityAI entity = EntityAI.Cast(obj);
+		return entity && (entity.IsZombie() || entity.IsAnimal());
+	}
+
+	/**
+	    \brief Trace the attacker's line of sight to the hit point and record it on the damage DTO (WP-17).
+	    \details
+	        Vanilla checks no line of sight anywhere in the hit pipeline: the hit's zone, ammo and
+	        position are claim fields the shooter's client chose, so a ray that a wall or a hill
+	        blocks is the through-wall signal. Only real-player FIRE_ARM and CLOSE_COMBAT hits on a
+	        player, zombie or animal are traced (an item's model position is in the item's own
+	        space, and bots have no identity). The ray runs from the attacker's head bone (the
+	        origin vanilla melee target selection uses, so it follows the stance; the eye height of
+	        the stance when the skeleton reports the bone at the feet) to the hit point in
+	        world space. The victim, the attacker and everything they carry, and any other creature
+	        (a body is not cover) do not block. Fully written into dto.los*, see LogZ_DTO_Damage.
+	*/
+	protected static void FillLineOfSight(LogZ_DTO_Damage dto, Object victim, EntityAI source, int damageType, int component, vector modelPos)
+	{
+		if (!LogZ_Config.Get().filters.hit_los)
+			return;
+
+		if (damageType != DamageType.FIRE_ARM && damageType != DamageType.CLOSE_COMBAT)
+			return;
+
+		if (!IsBody(victim))
+			return;
+
+		PlayerBase attacker = PlayerBase.Cast(source.GetHierarchyRootPlayer());
+		if (!attacker || attacker == victim || !attacker.GetIdentity())
+			return;
+
+		dto.los = "skipped";
+		if (component < 0)
+			return;
+
+		int head = attacker.GetBoneIndexByName("Head");
+		if (head < 0)
+			return;
+
+		vector from = attacker.GetBonePositionWS(head);
+		vector feet = attacker.GetPosition();
+
+		// a skeleton without animation state reports every bone at the entity origin: the ray
+		// would start on the ground. Fall back to the eye height of the stance.
+		if (from[1] - feet[1] < 0.3) {
+			float eye = 1.6;
+			if (attacker.IsPlayerInStance(DayZPlayerConstants.STANCEMASK_PRONE | DayZPlayerConstants.STANCEMASK_RAISEDPRONE))
+				eye = 0.4;
+			else if (attacker.IsPlayerInStance(DayZPlayerConstants.STANCEMASK_CROUCH | DayZPlayerConstants.STANCEMASK_RAISEDCROUCH))
+				eye = 1.1;
+
+			from = feet + Vector(0, eye, 0);
+		}
+
+		vector to = victim.ModelToWorld(modelPos);
+		if (vector.DistanceSq(from, to) < 0.01)
+			return;
+
+		dto.los_from = from;
+
+		// RaycastRV reports only the nearest contact, and the nearest is usually the attacker's own
+		// body or rifle at the ray origin. Whatever is not cover (the attacker and their gear, the
+		// victim and theirs, any other creature) is stepped over: the ray restarts just behind it.
+		vector dir = vector.Direction(from, to);
+		dir.Normalize();
+		vector origin = from;
+		vector contactPos;
+		vector contactDir;
+		int contactComponent;
+		set<Object> results = new set<Object>();
+		for (int i = 0; i < LOS_MAX_STEPS; ++i) {
+			results.Clear();
+			if (!DayZPhysics.RaycastRV(origin, to, contactPos, contactDir, contactComponent, results, null, victim, true, false, LOS_GEOMETRY)) {
+				dto.los = "clear";
+				return;
+			}
+
+			Object cover;
+			foreach (Object obj : results) {
+				if (obj && !IsOwnOrBody(obj, attacker, victim)) {
+					cover = obj;
+					break;
+				}
+			}
+
+			// no object at all in the result is terrain
+			if (cover || results.Count() == 0) {
+				dto.los = "blocked";
+				dto.los_contact = contactPos;
+				if (cover)
+					dto.los_object = LogZ_Json.Token(cover.GetType());
+
+				return;
+			}
+
+			origin = contactPos + dir * 0.1;
+			if (vector.DistanceSq(origin, to) < 0.04)
+				break;
+		}
+
+		dto.los = "clear";
+	}
+
+	/**
+	    \brief True for what does not count as cover: the attacker, the victim, what either carries or wears, and any other creature.
+	*/
+	protected static bool IsOwnOrBody(Object obj, PlayerBase attacker, Object victim)
+	{
+		if (obj == victim || obj == attacker || IsBody(obj))
+			return true;
+
+		EntityAI entity = EntityAI.Cast(obj);
+		return entity && (entity.GetHierarchyRootPlayer() == attacker || entity.GetHierarchyRoot() == victim);
 	}
 
 	protected static ref map<string, string> s_ZoneOrigin; // vanilla creator running right now, see BeginZoneOrigin

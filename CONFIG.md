@@ -124,6 +124,12 @@ Changes require a server restart to take effect.
   Skip AI (eAI) shooters in `WEAPON_FIRE` events. Fire events are
   unthrottled by default and eAI fires a lot; the analyzer ignores AI
   shooters.
+* **`filters.hit_los`** (`bool`) = true -
+  Trace a server-side line of sight from the attacker's head to the hit
+  point for every real-player firearm or melee hit on a player, zombie or
+  animal, and put the result on the hit line (`damage.los*`). One raycast
+  per such hit line. Vanilla checks no line of sight, so a blocked ray is
+  the through-wall signal.
 
 ### Throttling
 
