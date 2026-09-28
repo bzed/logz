@@ -72,11 +72,26 @@ modded class PlayerBase
 	override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source, int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
 	{
 		// EEHitBy runs before OnDamageDestroyed/EEKilled, so the lethal hit is still logged;
-		// only hits after the kill was logged (corpses, ruins) are skipped.
-		if (!LogZ_IsAlreadyKilled())
-			LogZ_WorldLogger.WithHit(this, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, LogZ_Level.INFO);
+		// only hits after the kill was logged (corpses, ruins) are skipped. The line is built
+		// before vanilla's body runs and written after it, so it can say how many bleeding sources
+		// the hit opened (WP-17); it is still written inside this call, before any kill line.
+		LogZ_PendingHit pending;
+		int bleedingBefore = -1;
+		if (!LogZ_IsAlreadyKilled()) {
+			pending = LogZ_WorldLogger.PrepareHit(this, source, damageResult, damageType, component, dmgZone, ammo, modelPos, speedCoef, LogZ_Level.INFO);
+			if (pending && GetBleedingManagerServer())
+				bleedingBefore = GetBleedingManagerServer().GetBleedingSourcesCount();
+		}
 
 		super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
+
+		if (pending) {
+			int bleedingAdded = -1;
+			if (bleedingBefore >= 0 && GetBleedingManagerServer())
+				bleedingAdded = GetBleedingManagerServer().GetBleedingSourcesCount() - bleedingBefore;
+
+			LogZ_WorldLogger.EmitHit(pending, bleedingAdded);
+		}
 	}
 
 	// * --- cargo in ---

@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+* Hit line of sight and damage anatomy (WP-17, contract batch 3), on `LogZ_DTO_Damage` of every hit
+  line: `damage_blood`, `damage_shock` (the other damage types of the hit; vanilla feeds the blood
+  value to the bleeding roll) and `bleeding_added` (bleeding sources the hit opened, player victims
+  only; the player's hit line is now written after vanilla's `EEHitBy` body to measure it, still
+  inside the same call and before any kill line). For real-player `FIRE_ARM`/`CLOSE_COMBAT` hits on a
+  player, zombie or animal a server-side ray from the attacker's head to the hit point:
+  `los` (`clear`/`blocked`/`skipped`, empty when not captured), `los_contact`, `los_object`,
+  `los_from`. Vanilla checks no line of sight, so a blocked ray is the through-wall signal. The ray
+  intersects fire geometry and steps over the attacker's own gear and other creatures. New option
+  `filters.hit_los` (default true, one raycast per such hit line)
 * `EXPANSION_TELEPORT` event (`expansion.teleport`, numeric mask only) for DayZ
   Expansion Core: every relocation of a player's own character through
   `Expansion_Teleport` (the spawn-selection menu and the standalone Teleporter
