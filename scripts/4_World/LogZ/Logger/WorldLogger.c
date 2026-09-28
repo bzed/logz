@@ -154,9 +154,62 @@ class LogZ_WorldLogger
 		LogZ.Log(string.Format("%1 hit", LogZ_Object.GetType(victim)), lvl, eventType, dto);
 	}
 
+	protected static ref map<string, string> s_ZoneOrigin; // vanilla creator running right now, see BeginZoneOrigin
+	protected static int s_ZoneOriginMs;
+
 	/**
-	    \brief Log a gas zone the server created (WP-14).
+	    \brief Record which vanilla creator is about to make a gas zone (before its vanilla body runs).
 	    \details
+	        Vanilla has exactly four ContaminatedArea_Local creators: the hit-claim branch of
+	        DayZGame.FirearmEffects (see LogZ_GameLogger.WithClaim), Grenade_ChemGas.OnExplode and
+	        Ammo_40mm_ChemGas.OnActivatedByItem / EEKilled. The zone's EEInit runs inside their
+	        CreateObject call, so WithContaminatedArea can name the creator. A zone made while none of
+	        them runs has origin "unknown" (a mod, an admin tool, or a path no script shows).
+	    \param origin  "grenade" or "ammo_pile".
+	    \param obj     The grenade or pile.
+	    \param cause   What set it off (the pile's killer or activating item), may be null.
+	*/
+	static void BeginZoneOrigin(string origin, EntityAI obj, Object cause = null)
+	{
+		s_ZoneOrigin = new map<string, string>();
+		s_ZoneOrigin.Insert("origin", origin);
+		s_ZoneOriginMs = g_Game.GetTime();
+
+		string json;
+		if (LogZ_GameLogger.SerializeObject(obj, json))
+			s_ZoneOrigin.Insert("origin_object", json);
+
+		// a pile destroyed with no damage source names itself as the killer
+		if (cause == obj)
+			cause = null;
+
+		// whoever holds the object (a grenade going off in hands), else whoever set it off
+		Object who = cause;
+		if (obj && obj.GetHierarchyRootPlayer())
+			who = obj;
+
+		if (cause && LogZ_GameLogger.SerializeObject(cause, json))
+			s_ZoneOrigin.Insert("attacker", json);
+
+		if (who && LogZ_GameLogger.SerializeParentObject(who, json))
+			s_ZoneOrigin.Insert("attacker_parent", json);
+	}
+
+	/**
+	    \brief End of the creator BeginZoneOrigin recorded, called after its vanilla body ran.
+	*/
+	static void EndZoneOrigin()
+	{
+		s_ZoneOrigin = null;
+	}
+
+	/**
+	    \brief Log a gas zone the server created (WP-14, origin 2026-09-28).
+	    \details
+	        origin names the vanilla creator that was running: "claim" (a hit claim, see below),
+	        "grenade", "ammo_pile" or "unknown". An unknown zone is WARN: no vanilla script path made it.
+	        For a grenade or pile, origin_object is the grenade or pile, attacker what set it off (the
+	        pile's killer or activating item) and attacker_parent the player holding either.
 	        via_claim is 1 when the zone was created inside a hit claim, in which case the claim's
 	        source and shooter are copied to the line (attacker, attacker_parent) with claim_ammo_type
 	        and claim_launcher (1: the claim's source was a launcher in the shooter's hands). Such a
@@ -171,7 +224,14 @@ class LogZ_WorldLogger
 
 		LogZ_Level lvl = LogZ_Level.INFO;
 		ref map<string, string> claim = LogZ_GameLogger.GetZoneClaim();
+		ref map<string, string> origin;
+		if (s_ZoneOrigin && (g_Game.GetTime() - s_ZoneOriginMs) < 250)
+			origin = s_ZoneOrigin;
+
 		if (claim && claim.Get("claim_launcher") != "1")
+			lvl = LogZ_Level.WARN;
+
+		if (!claim && !origin)
 			lvl = LogZ_Level.WARN;
 
 		if (!LogZ_Levels.IsEnabled(lvl))
@@ -186,11 +246,19 @@ class LogZ_WorldLogger
 		dto.Insert("lifetime", zone.GetRemainingTime().ToString());
 
 		if (claim) {
+			dto.Insert("origin", "claim");
 			dto.Insert("via_claim", "1");
 			foreach (string key, string value : claim)
 				dto.Insert(key, value);
 		} else {
+			if (!origin)
+				dto.Insert("origin", "unknown");
+
 			dto.Insert("via_claim", "0");
+			if (origin) {
+				foreach (string okey, string ovalue : origin)
+					dto.Insert(okey, ovalue);
+			}
 		}
 
 		LogZ.Log("contaminated area", lvl, LogZ_Event.SYSTEM_WORLD, dto);
